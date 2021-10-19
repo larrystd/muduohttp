@@ -35,6 +35,8 @@ Acceptor::Acceptor(EventLoop* loop, const InetAddress& listenAddr, bool reusepor
   assert(idleFd_ >= 0);
   acceptSocket_.setReuseAddr(true);
   acceptSocket_.setReusePort(reuseport);
+
+  //// 监听地址
   acceptSocket_.bindAddress(listenAddr);
   // 该通道可读的回调函数,loop中调用。一旦该通道可读即调用
   acceptChannel_.setReadCallback(

@@ -10,6 +10,12 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 enable_testing()
 
+
+FIND_PATH(myHeader mysql/mysql.h)
+IF(myHeader)
+INCLUDE_DIRECTORIES(${myHeader})
+ENDIF(myHeader)
+
 set(http_SRCS
   HttpServer.cc
   HttpResponse.cc
@@ -30,8 +36,8 @@ set(HEADERS
 #install(FILES ${HEADERS} DESTINATION include/muduo/net/http)
 find_package(Boost REQUIRED)
 #find_package(Threads REQUIRED)
-include_directories(/home/larry/myproject/myc++proj/muduostd)
-link_directories(/home/larry/myproject/myc++proj/muduostd/build/lib)
+include_directories(/home/larry/myproject/muduohttp/muduo)
+link_directories(/home/larry/myproject/muduohttp/muduo/build/lib)
 #link_libraries(muduo_base)
 #link_libraries(muduo_net)
 #link_libraries(pthread)

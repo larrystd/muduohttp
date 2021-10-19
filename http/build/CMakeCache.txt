@@ -230,6 +230,9 @@ http_SOURCE_DIR:STATIC=/home/larry/myproject/myc++proj/muduostd/http
 //Dependencies for the target
 muduo_http_LIB_DEPENDS:STATIC=general;muduo_net;general;muduo_base;general;pthread;
 
+//Path to a file.
+myHeader:PATH=/usr/include
+
 
 ########################
 # INTERNAL cache entries

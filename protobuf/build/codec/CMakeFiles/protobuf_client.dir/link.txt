@@ -1,1 +1,0 @@
-/usr/bin/c++  -O0  -rdynamic CMakeFiles/protobuf_client.dir/client.cc.o  -o ../bin/protobuf_client   -L/home/larry/myproject/myc++proj/muduostd/build/lib  -Wl,-rpath,/home/larry/myproject/myc++proj/muduostd/build/lib ../lib/libprotobuf_codec.a ../lib/libquery_proto.a -lmuduo_net -lz -lprotobuf -lpthread 

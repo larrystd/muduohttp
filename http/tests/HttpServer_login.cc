@@ -10,6 +10,11 @@
 #include <cstdio>
 #include <mysql/mysql.h>
 
+/*
+ubuntu 开发库默认开发位置
+gcc -I/usr/include/mysql *.c -L/usr/lib/mysql -lmysqlclient -o *
+*/
+
 using namespace std;
 
 using namespace muduo;
@@ -18,6 +23,13 @@ using namespace muduo::net;
 bool benchmark = false;
 //string staticFilePath = "/home/larry/myproject/myc++proj/muduostd/http/static"; 
 string staticFilePath = "../../login";
+
+void finish_with_error(MYSQL *con)
+{
+  fprintf(stderr, "%s\n", mysql_error(con));
+  mysql_close(con);
+  ///exit(1);
+}
 
 /// 读取html等静态网页文件
 string readFileContent(string file)
@@ -76,10 +88,10 @@ void onRequest(const HttpRequest& req, HttpResponse* resp)
     while (*sym_e2 != '=')
       sym_e2++;
 
-    string name(sym_e1+1, gap-sym_e1);
-    string passwd(sym_e2+1, strlen(sym_e2));
+    string name(sym_e1+1, gap-sym_e1-1);
+    string password(sym_e2+1, strlen(sym_e2));
     cout << name << endl;
-    cout << passwd<<endl;
+    cout << password<<endl;
 
     /// 存储到数据库中
 
@@ -94,13 +106,28 @@ void onRequest(const HttpRequest& req, HttpResponse* resp)
 
     /// 执行mysql检索
     ///根据用户名和密码
-    int res = mysql_query(mysql, sql_insert);
+    MYSQL *con = mysql_init(NULL);
+
+    if (con == NULL)
+    {
+        fprintf(stderr, "%s\n", mysql_error(con));
+        /// exit(1);
+    }
+
+    if (mysql_real_connect(con, "localhost", "root", "root",
+            "mydb", 0, NULL, 0) == NULL)
+    {
+        finish_with_error(con);
+    }
+    int res = mysql_query(con, sql_insert);
+
+
 
     if (!res)
         resPath+="/log.html";
     else
         resPath+="/registerError.html";
-
+    mysql_close(con);
   }
 
   std::ifstream fileIsExist(resPath.data());

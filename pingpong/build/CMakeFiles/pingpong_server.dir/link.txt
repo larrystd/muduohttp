@@ -1,1 +1,0 @@
-/usr/bin/c++  -O0  -rdynamic CMakeFiles/pingpong_server.dir/server.cc.o  -o bin/pingpong_server   -L/home/larry/myproject/myc++proj/muduostd/build/lib  -Wl,-rpath,/home/larry/myproject/myc++proj/muduostd/build/lib -lmuduo_base -lpthread -lrt -lmuduo_net 
