@@ -88,6 +88,7 @@
         "__split_buffer": "cpp",
         "__string": "cpp",
         "__threading_support": "cpp",
-        "__tuple": "cpp"
+        "__tuple": "cpp",
+        "variant": "cpp"
     }
 }

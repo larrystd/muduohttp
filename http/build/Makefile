@@ -51,25 +51,13 @@ RM = /usr/local/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/larry/myproject/myc++proj/muduostd/http
+CMAKE_SOURCE_DIR = /home/larry/myproject/muduohttp/http
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/larry/myproject/myc++proj/muduostd/http/build
+CMAKE_BINARY_DIR = /home/larry/myproject/muduohttp/http/build
 
 #=============================================================================
 # Targets provided globally by CMake.
-
-# Special rule for the target install/strip
-install/strip: preinstall
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing the project stripped..."
-	/usr/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
-.PHONY : install/strip
-
-# Special rule for the target install/strip
-install/strip/fast: preinstall/fast
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing the project stripped..."
-	/usr/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
-.PHONY : install/strip/fast
 
 # Special rule for the target install
 install: preinstall
@@ -82,6 +70,28 @@ install/fast: preinstall/fast
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
 	/usr/local/bin/cmake -P cmake_install.cmake
 .PHONY : install/fast
+
+# Special rule for the target list_install_components
+list_install_components:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Available install components are: \"Unspecified\""
+.PHONY : list_install_components
+
+# Special rule for the target list_install_components
+list_install_components/fast: list_install_components
+
+.PHONY : list_install_components/fast
+
+# Special rule for the target install/strip
+install/strip: preinstall
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing the project stripped..."
+	/usr/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+.PHONY : install/strip
+
+# Special rule for the target install/strip
+install/strip/fast: preinstall/fast
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing the project stripped..."
+	/usr/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
+.PHONY : install/strip/fast
 
 # Special rule for the target rebuild_cache
 rebuild_cache:
@@ -117,16 +127,6 @@ test/fast: test
 
 .PHONY : test/fast
 
-# Special rule for the target list_install_components
-list_install_components:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Available install components are: \"Unspecified\""
-.PHONY : list_install_components
-
-# Special rule for the target list_install_components
-list_install_components/fast: list_install_components
-
-.PHONY : list_install_components/fast
-
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
@@ -140,9 +140,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/larry/myproject/myc++proj/muduostd/http/build/CMakeFiles /home/larry/myproject/myc++proj/muduostd/http/build/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/larry/myproject/muduohttp/http/build/CMakeFiles /home/larry/myproject/muduohttp/http/build/CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/larry/myproject/myc++proj/muduostd/http/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/larry/myproject/muduohttp/http/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -169,6 +169,19 @@ preinstall/fast:
 depend:
 	$(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
+
+#=============================================================================
+# Target rules for targets named mysqllib
+
+# Build rule for target.
+mysqllib: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 mysqllib
+.PHONY : mysqllib
+
+# fast build rule for target.
+mysqllib/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mysqllib.dir/build.make CMakeFiles/mysqllib.dir/build
+.PHONY : mysqllib/fast
 
 #=============================================================================
 # Target rules for targets named httpserver_login
@@ -277,6 +290,33 @@ HttpServer.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/muduo_http.dir/build.make CMakeFiles/muduo_http.dir/HttpServer.cc.s
 .PHONY : HttpServer.cc.s
 
+mysqlConn/mysql_conn.o: mysqlConn/mysql_conn.cc.o
+
+.PHONY : mysqlConn/mysql_conn.o
+
+# target to build an object file
+mysqlConn/mysql_conn.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mysqllib.dir/build.make CMakeFiles/mysqllib.dir/mysqlConn/mysql_conn.cc.o
+.PHONY : mysqlConn/mysql_conn.cc.o
+
+mysqlConn/mysql_conn.i: mysqlConn/mysql_conn.cc.i
+
+.PHONY : mysqlConn/mysql_conn.i
+
+# target to preprocess a source file
+mysqlConn/mysql_conn.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mysqllib.dir/build.make CMakeFiles/mysqllib.dir/mysqlConn/mysql_conn.cc.i
+.PHONY : mysqlConn/mysql_conn.cc.i
+
+mysqlConn/mysql_conn.s: mysqlConn/mysql_conn.cc.s
+
+.PHONY : mysqlConn/mysql_conn.s
+
+# target to generate assembly for a file
+mysqlConn/mysql_conn.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mysqllib.dir/build.make CMakeFiles/mysqllib.dir/mysqlConn/mysql_conn.cc.s
+.PHONY : mysqlConn/mysql_conn.cc.s
+
 tests/HttpServer_login.o: tests/HttpServer_login.cc.o
 
 .PHONY : tests/HttpServer_login.o
@@ -310,13 +350,14 @@ help:
 	@echo "... all (the default if no target is provided)"
 	@echo "... clean"
 	@echo "... depend"
-	@echo "... install/strip"
 	@echo "... install"
+	@echo "... list_install_components"
+	@echo "... install/strip"
+	@echo "... mysqllib"
 	@echo "... httpserver_login"
 	@echo "... rebuild_cache"
 	@echo "... install/local"
 	@echo "... test"
-	@echo "... list_install_components"
 	@echo "... muduo_http"
 	@echo "... edit_cache"
 	@echo "... HttpContext.o"
@@ -328,6 +369,9 @@ help:
 	@echo "... HttpServer.o"
 	@echo "... HttpServer.i"
 	@echo "... HttpServer.s"
+	@echo "... mysqlConn/mysql_conn.o"
+	@echo "... mysqlConn/mysql_conn.i"
+	@echo "... mysqlConn/mysql_conn.s"
 	@echo "... tests/HttpServer_login.o"
 	@echo "... tests/HttpServer_login.i"
 	@echo "... tests/HttpServer_login.s"

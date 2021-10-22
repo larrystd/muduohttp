@@ -3,13 +3,13 @@
 //
 // Author: Shuo Chen (chenshuo at chenshuo dot com)
 
-#ifndef MUDUO_BASE_LOGFILE_H
-#define MUDUO_BASE_LOGFILE_H
+#ifndef MUDUO_BASE_LOGFILE_H_
+#define MUDUO_BASE_LOGFILE_H_
+
+#include <memory>
 
 #include "muduo/base/Mutex.h"
 #include "muduo/base/Types.h"
-
-#include <memory>
 
 namespace muduo
 {

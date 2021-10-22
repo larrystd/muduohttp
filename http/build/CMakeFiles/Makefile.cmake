@@ -48,6 +48,7 @@ set(CMAKE_MAKEFILE_PRODUCTS
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
+  "CMakeFiles/mysqllib.dir/DependInfo.cmake"
   "CMakeFiles/httpserver_login.dir/DependInfo.cmake"
   "CMakeFiles/muduo_http.dir/DependInfo.cmake"
   )

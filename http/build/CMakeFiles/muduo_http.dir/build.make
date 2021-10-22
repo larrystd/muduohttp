@@ -46,10 +46,10 @@ RM = /usr/local/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/larry/myproject/myc++proj/muduostd/http
+CMAKE_SOURCE_DIR = /home/larry/myproject/muduohttp/http
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/larry/myproject/myc++proj/muduostd/http/build
+CMAKE_BINARY_DIR = /home/larry/myproject/muduohttp/http/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/muduo_http.dir/depend.make
@@ -62,42 +62,42 @@ include CMakeFiles/muduo_http.dir/flags.make
 
 CMakeFiles/muduo_http.dir/HttpServer.cc.o: CMakeFiles/muduo_http.dir/flags.make
 CMakeFiles/muduo_http.dir/HttpServer.cc.o: ../HttpServer.cc
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/larry/myproject/myc++proj/muduostd/http/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/muduo_http.dir/HttpServer.cc.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/muduo_http.dir/HttpServer.cc.o -c /home/larry/myproject/myc++proj/muduostd/http/HttpServer.cc
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/larry/myproject/muduohttp/http/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/muduo_http.dir/HttpServer.cc.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/muduo_http.dir/HttpServer.cc.o -c /home/larry/myproject/muduohttp/http/HttpServer.cc
 
 CMakeFiles/muduo_http.dir/HttpServer.cc.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/muduo_http.dir/HttpServer.cc.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/larry/myproject/myc++proj/muduostd/http/HttpServer.cc > CMakeFiles/muduo_http.dir/HttpServer.cc.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/larry/myproject/muduohttp/http/HttpServer.cc > CMakeFiles/muduo_http.dir/HttpServer.cc.i
 
 CMakeFiles/muduo_http.dir/HttpServer.cc.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/muduo_http.dir/HttpServer.cc.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/larry/myproject/myc++proj/muduostd/http/HttpServer.cc -o CMakeFiles/muduo_http.dir/HttpServer.cc.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/larry/myproject/muduohttp/http/HttpServer.cc -o CMakeFiles/muduo_http.dir/HttpServer.cc.s
 
 CMakeFiles/muduo_http.dir/HttpResponse.cc.o: CMakeFiles/muduo_http.dir/flags.make
 CMakeFiles/muduo_http.dir/HttpResponse.cc.o: ../HttpResponse.cc
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/larry/myproject/myc++proj/muduostd/http/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/muduo_http.dir/HttpResponse.cc.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/muduo_http.dir/HttpResponse.cc.o -c /home/larry/myproject/myc++proj/muduostd/http/HttpResponse.cc
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/larry/myproject/muduohttp/http/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/muduo_http.dir/HttpResponse.cc.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/muduo_http.dir/HttpResponse.cc.o -c /home/larry/myproject/muduohttp/http/HttpResponse.cc
 
 CMakeFiles/muduo_http.dir/HttpResponse.cc.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/muduo_http.dir/HttpResponse.cc.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/larry/myproject/myc++proj/muduostd/http/HttpResponse.cc > CMakeFiles/muduo_http.dir/HttpResponse.cc.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/larry/myproject/muduohttp/http/HttpResponse.cc > CMakeFiles/muduo_http.dir/HttpResponse.cc.i
 
 CMakeFiles/muduo_http.dir/HttpResponse.cc.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/muduo_http.dir/HttpResponse.cc.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/larry/myproject/myc++proj/muduostd/http/HttpResponse.cc -o CMakeFiles/muduo_http.dir/HttpResponse.cc.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/larry/myproject/muduohttp/http/HttpResponse.cc -o CMakeFiles/muduo_http.dir/HttpResponse.cc.s
 
 CMakeFiles/muduo_http.dir/HttpContext.cc.o: CMakeFiles/muduo_http.dir/flags.make
 CMakeFiles/muduo_http.dir/HttpContext.cc.o: ../HttpContext.cc
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/larry/myproject/myc++proj/muduostd/http/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/muduo_http.dir/HttpContext.cc.o"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/muduo_http.dir/HttpContext.cc.o -c /home/larry/myproject/myc++proj/muduostd/http/HttpContext.cc
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/larry/myproject/muduohttp/http/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/muduo_http.dir/HttpContext.cc.o"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/muduo_http.dir/HttpContext.cc.o -c /home/larry/myproject/muduohttp/http/HttpContext.cc
 
 CMakeFiles/muduo_http.dir/HttpContext.cc.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/muduo_http.dir/HttpContext.cc.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/larry/myproject/myc++proj/muduostd/http/HttpContext.cc > CMakeFiles/muduo_http.dir/HttpContext.cc.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/larry/myproject/muduohttp/http/HttpContext.cc > CMakeFiles/muduo_http.dir/HttpContext.cc.i
 
 CMakeFiles/muduo_http.dir/HttpContext.cc.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/muduo_http.dir/HttpContext.cc.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/larry/myproject/myc++proj/muduostd/http/HttpContext.cc -o CMakeFiles/muduo_http.dir/HttpContext.cc.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/larry/myproject/muduohttp/http/HttpContext.cc -o CMakeFiles/muduo_http.dir/HttpContext.cc.s
 
 # Object files for target muduo_http
 muduo_http_OBJECTS = \
@@ -113,7 +113,7 @@ lib/libmuduo_http.a: CMakeFiles/muduo_http.dir/HttpResponse.cc.o
 lib/libmuduo_http.a: CMakeFiles/muduo_http.dir/HttpContext.cc.o
 lib/libmuduo_http.a: CMakeFiles/muduo_http.dir/build.make
 lib/libmuduo_http.a: CMakeFiles/muduo_http.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/larry/myproject/myc++proj/muduostd/http/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX static library lib/libmuduo_http.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/larry/myproject/muduohttp/http/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX static library lib/libmuduo_http.a"
 	$(CMAKE_COMMAND) -P CMakeFiles/muduo_http.dir/cmake_clean_target.cmake
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/muduo_http.dir/link.txt --verbose=$(VERBOSE)
 
@@ -127,6 +127,6 @@ CMakeFiles/muduo_http.dir/clean:
 .PHONY : CMakeFiles/muduo_http.dir/clean
 
 CMakeFiles/muduo_http.dir/depend:
-	cd /home/larry/myproject/myc++proj/muduostd/http/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/larry/myproject/myc++proj/muduostd/http /home/larry/myproject/myc++proj/muduostd/http /home/larry/myproject/myc++proj/muduostd/http/build /home/larry/myproject/myc++proj/muduostd/http/build /home/larry/myproject/myc++proj/muduostd/http/build/CMakeFiles/muduo_http.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/larry/myproject/muduohttp/http/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/larry/myproject/muduohttp/http /home/larry/myproject/muduohttp/http /home/larry/myproject/muduohttp/http/build /home/larry/myproject/muduohttp/http/build /home/larry/myproject/muduohttp/http/build/CMakeFiles/muduo_http.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/muduo_http.dir/depend
 

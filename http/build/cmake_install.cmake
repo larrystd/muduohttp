@@ -1,4 +1,4 @@
-# Install script for directory: /home/larry/myproject/myc++proj/muduostd/http
+# Install script for directory: /home/larry/myproject/muduohttp/http
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -38,7 +38,24 @@ if(NOT DEFINED CMAKE_CROSSCOMPILING)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "/home/larry/myproject/myc++proj/muduostd/http/build/lib/libmuduo_http.a")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE STATIC_LIBRARY FILES "/home/larry/myproject/muduohttp/http/build/lib/libmuduo_http.a")
+endif()
+
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  list(APPEND CMAKE_ABSOLUTE_DESTINATION_FILES
+   "/home/larry/myproject/muduohttp/http/build/include/HttpContext.h;/home/larry/myproject/muduohttp/http/build/include/HttpRequest.h;/home/larry/myproject/muduohttp/http/build/include/HttpResponse.h;/home/larry/myproject/muduohttp/http/build/include/HttpServer.h")
+  if(CMAKE_WARN_ON_ABSOLUTE_INSTALL_DESTINATION)
+    message(WARNING "ABSOLUTE path INSTALL DESTINATION : ${CMAKE_ABSOLUTE_DESTINATION_FILES}")
+  endif()
+  if(CMAKE_ERROR_ON_ABSOLUTE_INSTALL_DESTINATION)
+    message(FATAL_ERROR "ABSOLUTE path INSTALL DESTINATION forbidden (by caller): ${CMAKE_ABSOLUTE_DESTINATION_FILES}")
+  endif()
+file(INSTALL DESTINATION "/home/larry/myproject/muduohttp/http/build/include" TYPE FILE FILES
+    "/home/larry/myproject/muduohttp/http/HttpContext.h"
+    "/home/larry/myproject/muduohttp/http/HttpRequest.h"
+    "/home/larry/myproject/muduohttp/http/HttpResponse.h"
+    "/home/larry/myproject/muduohttp/http/HttpServer.h"
+    )
 endif()
 
 if(CMAKE_INSTALL_COMPONENT)
@@ -49,5 +66,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/larry/myproject/myc++proj/muduostd/http/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/larry/myproject/muduohttp/http/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
