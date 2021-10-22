@@ -1,13 +1,4 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-//
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/base/Logging.h"
-
-#include "muduo/base/CurrentThread.h"
-#include "muduo/base/Timestamp.h"
-#include "muduo/base/TimeZone.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -15,28 +6,16 @@
 
 #include <sstream>
 
+#include "muduo/base/CurrentThread.h"
+#include "muduo/base/Timestamp.h"
+#include "muduo/base/TimeZone.h"
+
 namespace muduo
 {
 
-/*
-class LoggerImpl
-{
- public:
-  typedef Logger::LogLevel LogLevel;
-  LoggerImpl(LogLevel level, int old_errno, const char* file, int line);
-  void finish();
-
-  Timestamp time_;
-  LogStream stream_;
-  LogLevel level_;
-  int line_;
-  const char* fullname_;
-  const char* basename_;
-};
-*/
-
-// 线程内部变量
+// 线程内部变量. 错误信息
 __thread char t_errnobuf[512];
+// 时间信息
 __thread char t_time[64];
 __thread time_t t_lastSecond;
 
@@ -46,7 +25,6 @@ const char* strerror_tl(int savedErrno)
   return strerror_r(savedErrno, t_errnobuf, sizeof t_errnobuf);
 }
 
-// char *getenv(const char *name) 搜索 name 所指向的环境字符串，并返回相关的值给字符串。
 Logger::LogLevel initLogLevel()
 {
   if (::getenv("MUDUO_LOG_TRACE"))
@@ -57,8 +35,10 @@ Logger::LogLevel initLogLevel()
     return Logger::INFO;
 }
 
+// g_logLevel先设置为初始化的level
 Logger::LogLevel g_logLevel = initLogLevel();
 
+/// const* char []
 const char* LogLevelName[Logger::NUM_LOG_LEVELS] =
 {
   "TRACE ",
@@ -84,13 +64,14 @@ class T
   const unsigned len_;
 };
 
-// 添加入日志流
+// 将T v添加入日志流
 inline LogStream& operator<<(LogStream& s, T v)
 {
   s.append(v.str_, v.len_);
   return s;
 }
 
+// 通过v.data_将文件名加入到LogStream的buf中
 inline LogStream& operator<<(LogStream& s, const Logger::SourceFile& v)
 {
   /// 对LogStream处理, 将data加入到LogStream的buffer中
@@ -98,30 +79,33 @@ inline LogStream& operator<<(LogStream& s, const Logger::SourceFile& v)
   return s;
 }
 
+// 默认输出, 用fwrite将msg刷入stdout
 void defaultOutput(const char* msg, int len)
 {
   /// 将msg刷新到stdout
-  size_t n = fwrite(msg, 1, len, stdout);
-  //FIXME check n
-  (void)n;
+  //size_t n = fwrite(msg, 1, len, stdout);
+  fwrite(msg, 1, len, stdout);
 }
 
-/// 刷新到标准输出
+/// fwrite是写入到流的缓冲区, fflush刷新流的缓冲区
 void defaultFlush()
 {
   /// 刷新到stdout, 缓存输出到终端
   fflush(stdout);
 }
 
-/// 设置函数
+/// 设置输出和刷函数
 Logger::OutputFunc g_output = defaultOutput;
 Logger::FlushFunc g_flush = defaultFlush;
+
+//时间
 TimeZone g_logTimeZone;
 
 }  // namespace muduo
 
 using namespace muduo;
 
+// 设置Logger的level, file
 Logger::Impl::Impl(LogLevel level, int savedErrno, const SourceFile& file, int line)
   : time_(Timestamp::now()),
     stream_(),
@@ -131,9 +115,11 @@ Logger::Impl::Impl(LogLevel level, int savedErrno, const SourceFile& file, int l
 {
   formatTime();
   CurrentThread::tid();
+  // 向流注入CurrentThread信息
   stream_ << T(CurrentThread::tidString(), CurrentThread::tidStringLength());
+  // 向刘注入level信息
   stream_ << T(LogLevelName[level], 6);
-  if (savedErrno != 0)
+  if (savedErrno != 0)  /// errno=0表示程序没有错误
   {
     stream_ << strerror_tl(savedErrno) << " (errno=" << savedErrno << ") ";
   }
@@ -142,6 +128,7 @@ Logger::Impl::Impl(LogLevel level, int savedErrno, const SourceFile& file, int l
 /// 格式化时间
 void Logger::Impl::formatTime()
 {
+  // 相关时间的设置
   int64_t microSecondsSinceEpoch = time_.microSecondsSinceEpoch();
   time_t seconds = static_cast<time_t>(microSecondsSinceEpoch / Timestamp::kMicroSecondsPerSecond);
   int microseconds = static_cast<int>(microSecondsSinceEpoch % Timestamp::kMicroSecondsPerSecond);
@@ -157,17 +144,18 @@ void Logger::Impl::formatTime()
     {
       ::gmtime_r(&seconds, &tm_time); // FIXME TimeZone::fromUtcTime
     }
-  /// 将... 根据format格式化, 输出到t_time中
-    int len = snprintf(t_time, sizeof(t_time), "%4d%02d%02d %02d:%02d:%02d",
+  /// 将时间信息按照年月日时分秒 根据"%4d%02d%02d %02d:%02d:%02d"格式化, 输出到t_time中
+    snprintf(t_time, sizeof(t_time), "%4d%02d%02d %02d:%02d:%02d",
         tm_time.tm_year + 1900, tm_time.tm_mon + 1, tm_time.tm_mday,
         tm_time.tm_hour, tm_time.tm_min, tm_time.tm_sec);
-    assert(len == 17); (void)len;
+    //assert(len == 17);
   }
 
   if (g_logTimeZone.valid())
   {
     Fmt us(".%06d ", microseconds);
     assert(us.length() == 8);
+    // t_time时间信息加入到流中
     stream_ << T(t_time, 17) << T(us.data(), 8);
   }
   else
@@ -180,12 +168,12 @@ void Logger::Impl::formatTime()
 
 void Logger::Impl::finish()
 {
-  /// 将结束符加入到stream的缓冲区中
+  /// 将- 日志文件名:行数加入到stream的缓冲区中
   stream_ << " - " << basename_ << ':' << line_ << '\n';
 }
 
 
-/// 构造函数
+/// Logger构造函数, 进而调用impl_
 Logger::Logger(SourceFile file, int line)
   : impl_(INFO, 0, file, line)
 {
@@ -194,7 +182,7 @@ Logger::Logger(SourceFile file, int line)
 Logger::Logger(SourceFile file, int line, LogLevel level, const char* func)
   : impl_(level, 0, file, line)
 {
-  impl_.stream_ << func << ' ';
+  impl_.stream_ << func << ' '; // func加入到流中
 }
 
 Logger::Logger(SourceFile file, int line, LogLevel level)
@@ -208,15 +196,15 @@ Logger::Logger(SourceFile file, int line, bool toAbort)
 }
 
 
-/// 在log析构的时候, flush日志数据
+/// 在Logger析构的时候, flush日志数据
 Logger::~Logger()
 {
-  /// 加入结束符
+  /// 加入结束信息
   impl_.finish();
-  /// 将stream().buffer()拷贝到新的buf中
+  /// 将stream().buffer()拷贝到新的buf中, 先创建对象再根据拷贝构造初始化对象返回对象的引用
   const LogStream::Buffer& buf(stream().buffer());
 
-  /// 对buf执行输出函数g_out, 即将msg刷新到stdout
+  /// g_output指向defaultOutput对buf, 即将msg刷新到stdout
   g_output(buf.data(), buf.length());
 
   /// 如果日志FATAL
@@ -224,27 +212,28 @@ Logger::~Logger()
   {
     /// 全部刷新到g_flush中
     g_flush();
-    // 结束线程程序执行
+    // 结束当前线程程序执行
     abort();
   }
 }
 
-/// 日志level
+/// 设置日志level
 void Logger::setLogLevel(Logger::LogLevel level)
 {
   g_logLevel = level;
 }
 
+// 设置outFunc函数
 void Logger::setOutput(OutputFunc out)
 {
   g_output = out;
 }
-
+// 设置刷新函数
 void Logger::setFlush(FlushFunc flush)
 {
   g_flush = flush;
 }
-
+// 设置时间工具TimeZone
 void Logger::setTimeZone(const TimeZone& tz)
 {
   g_logTimeZone = tz;

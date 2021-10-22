@@ -97,9 +97,6 @@ void LogFile::append_unlocked(const char* logline, int len)
 
 
 /// 日志滚动
-
-///在一组日志文件之中，编号最大的（最旧的）一个日志文件会被删除，其余的日志文件编号则依次增大并取代较旧的日志文件，
-///而较新的文件则取代它作为当前的日志文件。
 bool LogFile::rollFile()
 {
   time_t now = 0;

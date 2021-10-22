@@ -41,7 +41,7 @@ TcpConnection::TcpConnection(EventLoop* loop,
                              int sockfd,
                              const InetAddress& localAddr,
                              const InetAddress& peerAddr)
-  : loop_(CHECK_NOTNULL(loop)), // loop对象
+  : loop_(loop), // loop对象
     name_(nameArg),
     state_(kConnecting),
     

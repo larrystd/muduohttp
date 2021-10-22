@@ -1,17 +1,14 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-//
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/base/LogStream.h"
 
-#include <algorithm>
-#include <limits>
-#include <type_traits>
 #include <assert.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+
+#include <algorithm>
+#include <limits>
+#include <type_traits>
+
 
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
@@ -23,18 +20,12 @@
 using namespace muduo;
 using namespace muduo::detail;
 
-// TODO: better itoa.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Wtautological-compare"
-#else
-#pragma GCC diagnostic ignored "-Wtype-limits"
-#endif
-
 namespace muduo
 {
 namespace detail
 {
 
+/// 9-0-9, size=20(还有一个\0)
 const char digits[] = "9876543210123456789";
 const char* zero = digits + 9;
 static_assert(sizeof(digits) == 20, "wrong number of digits");
@@ -43,7 +34,7 @@ const char digitsHex[] = "0123456789ABCDEF";
 static_assert(sizeof digitsHex == 17, "wrong number of digitsHex");
 
 // Efficient Integer to String Conversions, by Matthew Wilson.
-/// 
+/// 将T类型value, 转为char buf[]的字符串
 template<typename T>
 size_t convert(char buf[], T value)
 {
@@ -69,6 +60,7 @@ size_t convert(char buf[], T value)
   return p - buf; // size
 }
 
+/// 10进制整数value转为16进制字符串char buf[]
 size_t convertHex(char buf[], uintptr_t value)
 {
   uintptr_t i = value;
@@ -93,6 +85,8 @@ template class FixedBuffer<kLargeBuffer>;
 }  // namespace detail
 
 /*
+formatSI 以1000为单位
+按照如下格式将int64_t 64位整数格式化成string
  Format a number with 5 characters, including SI units.
  [0,     999]
  [1.00k, 999k]
@@ -144,6 +138,8 @@ std::string formatSI(int64_t s)
 }
 
 /*
+formatIEC 以1024为单位
+按照如下格式将int64_t 64位整数格式化成string
  [0, 1023]
  [1.00Ki, 9.99Ki]
  [10.0Ki, 99.9Ki]
@@ -214,16 +210,7 @@ const char* FixedBuffer<SIZE>::debugString()
   return data_;
 }
 
-template<int SIZE>
-void FixedBuffer<SIZE>::cookieStart()
-{
-}
-
-template<int SIZE>
-void FixedBuffer<SIZE>::cookieEnd()
-{
-}
-
+/// 用kMaxNumericSize进行静态检测
 void LogStream::staticCheck()
 {
   static_assert(kMaxNumericSize - 10 > std::numeric_limits<double>::digits10,
@@ -236,13 +223,13 @@ void LogStream::staticCheck()
                 "kMaxNumericSize is large enough");
 }
 
-/// 输出流缓冲
+/// 将泛型T v存储到buffer_中。
 template<typename T>
 void LogStream::formatInteger(T v)
 {
   if (buffer_.avail() >= kMaxNumericSize)
   {
-    // 将T v 转为字符指针buffer_
+    // convert, 将v存储到buffer_.current()内存起始处
     size_t len = convert(buffer_.current(), v);
 
     /// len区域已经输出, 指针右移
@@ -250,7 +237,7 @@ void LogStream::formatInteger(T v)
   }
 }
 
-/// 输出的类型重载
+/// 重载short v, 可以使用LogStream << 输入到流中
 LogStream& LogStream::operator<<(short v)
 {
   *this << static_cast<int>(v);
@@ -263,9 +250,10 @@ LogStream& LogStream::operator<<(unsigned short v)
   return *this;
 }
 
+/// int类型的operator<<到流中, 基于convert泛型实现。
 LogStream& LogStream::operator<<(int v)
 {
-  formatInteger(v);
+  formatInteger(v); 
   return *this;
 }
 
@@ -299,11 +287,10 @@ LogStream& LogStream::operator<<(unsigned long long v)
   return *this;
 }
 
-LogStream& LogStream::operator<<(const void* p)
-{
-  uintptr_t v = reinterpret_cast<uintptr_t>(p);
-  if (buffer_.avail() >= kMaxNumericSize)
-  {
+/// 指针类型就是地址, 用16进制的字符串存储
+LogStream& LogStream::operator<<(const void* p) {
+  uintptr_t v = reinterpret_cast<uintptr_t>(p); /// 四个字节读取, 范围为0~2^32 unsigned long int
+  if (buffer_.avail() >= kMaxNumericSize) { /// 存在可用空间
     char* buf = buffer_.current();
     buf[0] = '0';
     buf[1] = 'x';
@@ -318,6 +305,7 @@ LogStream& LogStream::operator<<(double v)
 {
   if (buffer_.avail() >= kMaxNumericSize)
   {
+    /// 使用sprintf将double v格式化的存储到buffer中
     int len = snprintf(buffer_.current(), kMaxNumericSize, "%.12g", v);
     /// buffer_
     buffer_.add(len);
@@ -325,6 +313,7 @@ LogStream& LogStream::operator<<(double v)
   return *this;
 }
 
+/// fmt的构造风格是, 将val按照const char fmt的风格存储到buf_中
 template<typename T>
 Fmt::Fmt(const char* fmt, T val)
 {

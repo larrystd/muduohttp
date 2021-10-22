@@ -23,7 +23,7 @@ TcpServer::TcpServer(EventLoop* loop,
                      const InetAddress& listenAddr,
                      const string& nameArg,
                      Option option)
-  : loop_(CHECK_NOTNULL(loop)),
+  : loop_(loop),
     ipPort_(listenAddr.toIpPort()),
     name_(nameArg),
     /// 初始化acceptor监听连接,(调用listen(才开始监听)

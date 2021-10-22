@@ -27,8 +27,8 @@ install(TARGETS muduo_base DESTINATION lib)
 #install(TARGETS muduo_base_cpp11 DESTINATION lib)
 
 file(GLOB HEADERS "*.h")
-install(FILES ${HEADERS} DESTINATION include/muduo/base)
+install(FILES ${HEADERS} DESTINATION include/base)
 
-if(MUDUO_BUILD_EXAMPLES)
-  add_subdirectory(tests)
-endif()
+#if(MUDUO_BUILD_EXAMPLES)
+#  add_subdirectory(tests)
+#endif()

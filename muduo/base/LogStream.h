@@ -1,158 +1,146 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-//
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
+#ifndef MUDUO_BASE_LOGSTREAM_H_
+#define MUDUO_BASE_LOGSTREAM_H_
 
-#ifndef MUDUO_BASE_LOGSTREAM_H
-#define MUDUO_BASE_LOGSTREAM_H
+#include <assert.h>
+#include <string.h> // memcpy
 
 #include "muduo/base/noncopyable.h"
 #include "muduo/base/StringPiece.h"
 #include "muduo/base/Types.h"
-#include <assert.h>
-#include <string.h> // memcpy
 
 namespace muduo
 {
 
 namespace detail
 {
-/// 缓冲区大小
+/// 日志缓冲区大小
 const int kSmallBuffer = 4000;
 const int kLargeBuffer = 4000*1000;
 
-/// 缓冲区类
-template<int SIZE>
+// 日志定长缓冲区, 维护一个连续内存data_, 当前的地址cur_, 增加数据直接再cur_之后添加
+// 操作cur_指针的函数, add(len), reset(), 清空data_函数bzero
+// cookie是一个函数指针,
+template <int SIZE>
 class FixedBuffer : noncopyable
 {
  public:
-  FixedBuffer()
-    : cur_(data_)
-  {
-    setCookie(cookieStart);
+  FixedBuffer() : cur_(data_){
+  }
+  ~FixedBuffer() {
   }
 
-  ~FixedBuffer()
-  {
-    setCookie(cookieEnd);
-  }
-
-  /// 在char* cur指针处加入数据
-  void append(const char* /*restrict*/ buf, size_t len)
-  {
-    // FIXME: append partially
-    if (implicit_cast<size_t>(avail()) > len)
-    {
-      /// 把buf拷贝到cur指针处
-      memcpy(cur_, buf, len);
+  void append(const char* buf, size_t len) {
+    if (implicit_cast<size_t>(avail()) > len){  // implicit_cast作用相当于static_cast
+      memcpy(cur_, buf, len); /// 以字节为单位存储
       cur_ += len;
-    }
+    } /// 空间足够
   }
 
-  const char* data() const { return data_; }
-  // 缓冲的长度
-  int length() const { return static_cast<int>(cur_ - data_); }
+  const char* data() const {
+    return data_;
+  }
+  /// 使用的长度
+  int length() const {
+    return static_cast<int>(cur_ - data_);
+  }
 
-  // write to data_ directly
-  /// 当前输出位置指针
-  char* current() { return cur_; }
-  /// 可用的字节大小
-  int avail() const { return static_cast<int>(end() - cur_); }
-  /// 区域已使用(输出)cur右移
-  void add(size_t len) { cur_ += len; }
-  // 重置cur_指针
-  void reset() { cur_ = data_; }
-  void bzero() { memZero(data_, sizeof data_); }
+  char* current() {
+    return cur_;
+  }
+  /// 还可以用的长度
+  int avail() const {
+    return static_cast<int>(end() - cur_);
+  }
 
-  // for used by GDB
+  void add(size_t len) {
+    cur_ += len;
+  }
+
+  /// 重置
+  void reset() {
+    cur_ = data_;
+  }
+  void bzero() {
+    memZero(data_, sizeof data_);
+  }
+
   const char* debugString();
-  void setCookie(void (*cookie)()) { cookie_ = cookie; }
-  // for used by unit test
-  string toString() const { return string(data_, length()); }
-  StringPiece toStringPiece() const { return StringPiece(data_, length()); }
+
+  string toString() const {
+    return string(data_, length());
+  }
+
+  StringPiece toStringPiece() const {
+    return StringPiece(data_, length());
+  }
 
  private:
-  const char* end() const { return data_ + sizeof data_; }
-  // Must be outline function for cookies.
-  static void cookieStart();
-  static void cookieEnd();
-
-  void (*cookie_)();
-
-  /// 缓冲区
+  const char* end() const {
+    return data_ + sizeof(data_);
+  }
   char data_[SIZE];
-  char* cur_;
+  char* cur_; 
 };
 
 }  // namespace detail
+
 
 /// 日志流
 class LogStream : noncopyable
 {
   typedef LogStream self;
  public:
+  // 创建kSmallBuffer的内存
   typedef detail::FixedBuffer<detail::kSmallBuffer> Buffer;
 
-  /// 输出流重载
-  self& operator<<(bool v)
-  {
+  /// LogStram对象重载operator<< 操作符
+  LogStream& operator<<(bool v) {
     buffer_.append(v ? "1" : "0", 1);
     return *this;
   }
+  /// 重载不同的类型
+  LogStream& operator<<(short);
+  LogStream& operator<<(unsigned short);
+  LogStream& operator<<(int);
+  LogStream& operator<<(unsigned int);
+  LogStream& operator<<(long);
+  LogStream& operator<<(unsigned long);
+  LogStream& operator<<(long long);
+  LogStream& operator<<(unsigned long long);
 
-  self& operator<<(short);
-  self& operator<<(unsigned short);
-  self& operator<<(int);
-  self& operator<<(unsigned int);
-  self& operator<<(long);
-  self& operator<<(unsigned long);
-  self& operator<<(long long);
-  self& operator<<(unsigned long long);
+  LogStream& operator<<(const void*);
 
-  self& operator<<(const void*);
-
-  self& operator<<(float v)
-  {
-    *this << static_cast<double>(v);
-    return *this;
-  }
-  self& operator<<(double);
-  // self& operator<<(long double);
-
-  self& operator<<(char v)
-  {
-    buffer_.append(&v, 1);
+  LogStream& operator<<(float v) {
+    *this << static_cast<double>(v);  /// 调用operator<<(double)处理
     return *this;
   }
 
-  // self& operator<<(signed char);
-  // self& operator<<(unsigned char);
+  LogStream& operator<<(double);
+  LogStream& operator<<(char v) {
+    buffer_.append(&v, 1);  /// 直接将char加入buffer_
+    return *this;
+  }
+  
 
-  self& operator<<(const char* str)
-  {
-    if (str)
-    {
-      buffer_.append(str, strlen(str));
+  LogStream& operator<<(const char* str) {
+    if (str) {
+      buffer_.append(str, strlen(str)); ///const char*容易处理, 当成连续的char
+    }else{
+      buffer_.append("(null)", 6);  /// 加入(null)
     }
-    else
-    {
-      buffer_.append("(null)", 6);
-    }
+
     return *this;
   }
 
-  self& operator<<(const unsigned char* str)
-  {
-    return operator<<(reinterpret_cast<const char*>(str));
+  LogStream& operator<<(const unsigned char* str) {
+    return operator<<(reinterpret_cast<const char*>(str));  /// reinterpret_cast用于指针的重新的解释, 反正指针都是4个字节
   }
 
-  self& operator<<(const string& v)
-  {
+  LogStream& operator<<(const string& v) {  /// string改成const char*处理
     buffer_.append(v.c_str(), v.size());
     return *this;
   }
 
-  /// 将StringPiece& v放入stream的缓冲区中
   self& operator<<(const StringPiece& v)
   {
     buffer_.append(v.data(), v.size());
@@ -165,35 +153,49 @@ class LogStream : noncopyable
     return *this;
   }
 
-  void append(const char* data, int len) { buffer_.append(data, len); }
-  const Buffer& buffer() const { return buffer_; }
-  void resetBuffer() { buffer_.reset(); }
+  void append(const char* data, int len) {  ///流的append调用底层缓冲区的append
+    buffer_.append(data, len);
+  }
+  /// 返回的引用一定是const&, 防止用户修改错误
+  const Buffer& buffer() const {
+    return buffer_;
+  }
+  void resetBuffer() {
+    buffer_.reset();
+  }
 
  private:
+ /// 静态检测
   void staticCheck();
 
   template<typename T>
-  void formatInteger(T);
-  /// 输入输出日志流的缓冲区
-  Buffer buffer_;
-  /// 设置的最大数值字节
+  void formatInteger(T);  /// 格式化
+
+  /// 日志流对应的缓冲区, 来自FixBuffer
+  Buffer buffer_; 
+  ///static const, 可用类名调用的常量
   static const int kMaxNumericSize = 32;
 };
 
-class Fmt // : noncopyable
+/// 可以被LogStream<< 流输出的对象
+class Fmt
 {
  public:
   template<typename T>
-  Fmt(const char* fmt, T val);
+  Fmt(const char* fmt, T val);  /// 模板构造
 
-  const char* data() const { return buf_; }
-  int length() const { return length_; }
-
+  const char* data() const {  /// 返回的引用, 指针加const防止变量被错误修改造成的错误
+    return buf_;
+  }
+  int length() const {
+    return length_;
+  }
  private:
   char buf_[32];
   int length_;
-};
+};  // Fmt
 
+/// LogStream 对象可以<<格式化输出fmt
 inline LogStream& operator<<(LogStream& s, const Fmt& fmt)
 {
   s.append(fmt.data(), fmt.length());
