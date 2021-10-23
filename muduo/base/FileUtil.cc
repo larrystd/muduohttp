@@ -1,8 +1,3 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-//
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/base/FileUtil.h"
 #include "muduo/base/Logging.h"
 
@@ -15,13 +10,12 @@
 
 using namespace muduo;
 
-/// open filename文件, 得到fp
+///AppendFile构造器根据文件名,  a表示可追加写, 返回得到fp
 FileUtil::AppendFile::AppendFile(StringArg filename)
   : fp_(::fopen(filename.c_str(), "ae")),  // 'e' for O_CLOEXEC
     writtenBytes_(0)
 {
-  /// 设置文件流的缓冲区
-  /// fp与缓冲区关联
+  /// 设置文件流的缓冲区, fp与缓冲区关联
   assert(fp_);
   ::setbuffer(fp_, buffer_, sizeof buffer_);
   // posix_fadvise POSIX_FADV_DONTNEED ?
@@ -33,7 +27,7 @@ FileUtil::AppendFile::~AppendFile()
   ::fclose(fp_);
 }
 
-/// 在文件后写入len字节的数据
+/// 在文件后写入len字节的数据, 实际上是logline的数据写入到fp的缓冲区中
 void FileUtil::AppendFile::append(const char* logline, const size_t len)
 {
   size_t written = 0;
@@ -41,7 +35,7 @@ void FileUtil::AppendFile::append(const char* logline, const size_t len)
   while (written != len)
   {
     size_t remain = len - written;
-    /// 写入对象的指针logline + written, 写入对象数为remain
+    /// 调用FileUtil write函数将logline的数据写入到fp的缓冲区中
     size_t n = write(logline + written, remain);
     if (n != remain)
     {
@@ -54,33 +48,27 @@ void FileUtil::AppendFile::append(const char* logline, const size_t len)
     }
     written += n;
   }
-  /// 已经写入的字节
+  // 文件缓冲区已经写入的字节
   writtenBytes_ += written;
 }
 
+/// fp_缓冲区数据刷新到持久化磁盘文件中
 void FileUtil::AppendFile::flush()
 {
   /// 将fp关联的缓冲区内的数据写回fp_指定的文件中
   ::fflush(fp_);
 }
 
-/// 
+// 将logline指的缓冲区写入到fp_文件流的缓冲区
 size_t FileUtil::AppendFile::write(const char* logline, size_t len)
 {
   // #undef fwrite_unlocked
   /// 无锁写入, 将logline指向内存的len字节写入到fp_指向的文件中
-  // buffer	-	指向数组中要被写入的首个对象的指针
-  // size	-	每个对象的大小, 一次一个字节
-  // count	-	要被写入的对象数
-  // stream	-	指向输出流的指针
-  // 但会写入的对象数, 也就是len
-
-  /// 事实上写入文件流的缓冲区
   return ::fwrite_unlocked(logline, 1, len, fp_);
 }
 
-/// 小文件构造
-/// 返回文件描述符
+// ReadSmallFile构造, open打开文件返回文件描述符,注意区分fopen和open,  int open(const char *path, int oflags,mode_t mode);
+// FILE文件指针结构包含一个缓冲区和一个文件描述符, 是对文件描述符的封装
 FileUtil::ReadSmallFile::ReadSmallFile(StringArg filename)
   : fd_(::open(filename.c_str(), O_RDONLY | O_CLOEXEC)),
     err_(0)
@@ -92,6 +80,7 @@ FileUtil::ReadSmallFile::ReadSmallFile(StringArg filename)
   }
 }
 
+// 关闭文件描述符
 FileUtil::ReadSmallFile::~ReadSmallFile()
 {
   if (fd_ >= 0)
@@ -101,7 +90,13 @@ FileUtil::ReadSmallFile::~ReadSmallFile()
 }
 
 // return errno
-/// 读取文件到content String
+// 读取文件到content String
+// stat 储存一些文件的属性, 例如
+//   dev_t         st_dev;       //文件的设备编号 
+//   ino_t         st_ino;       //节点 
+//    mode_t        st_mode;      //文件的类型和存取的权限
+// time_t        st_atime;     //最后一次访问时间 
+//    time_t        st_mtime;     //最后一次修改时间
 template<typename String>
 int FileUtil::ReadSmallFile::readToString(int maxSize,
                                           String* content,
@@ -119,6 +114,8 @@ int FileUtil::ReadSmallFile::readToString(int maxSize,
     if (fileSize)
     {
       struct stat statbuf;
+      /// 获取fd_的stat保存到statbuf中, 0表示成功
+      // 同时将相关信息存储到createTime等变量中
       if (::fstat(fd_, &statbuf) == 0)
       {
         if (S_ISREG(statbuf.st_mode))
@@ -149,8 +146,9 @@ int FileUtil::ReadSmallFile::readToString(int maxSize,
 
     while (content->size() < implicit_cast<size_t>(maxSize))
     {
+      // 可读的大小
       size_t toRead = std::min(implicit_cast<size_t>(maxSize) - content->size(), sizeof(buf_));
-      /// 读取文件数据到buf_
+      /// fd_读取文件数据到buf_中
       ssize_t n = ::read(fd_, buf_, toRead);
       /// buf_数据再到content
       if (n > 0)
@@ -176,6 +174,7 @@ int FileUtil::ReadSmallFile::readToBuffer(int* size)
   int err = err_;
   if (fd_ >= 0)
   {
+    // 在指定偏移offset位置开始读取count个字节，pread 可以保证线程安全, 因为是基于offset读取(相当于fseek), 多线程下文件指针没有改变
     ssize_t n = ::pread(fd_, buf_, sizeof(buf_)-1, 0);
     /// 读取成功
     if (n >= 0)
