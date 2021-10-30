@@ -98,7 +98,7 @@ void defaultFlush()
 Logger::OutputFunc g_output = defaultOutput;
 Logger::FlushFunc g_flush = defaultFlush;
 
-//时间
+//时区
 TimeZone g_logTimeZone;
 
 }  // namespace muduo

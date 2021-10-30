@@ -13,17 +13,15 @@
 
 // Thread safety annotations {
 // https://clang.llvm.org/docs/ThreadSafetyAnalysis.html
-// 线程安全注解
-//通过代码注解（annotations ）告诉编译器哪些成员变量和成员函数是受哪个 mutex 保护，这样如果忘记了加锁，编译器会给警告。
-
 // Enable thread safety attributes only with clang.
 // The attributes can be safely erased when compiling with other compilers.
 #if defined(__clang__) && (!defined(SWIG))
-#define THREAD_ANNOTATION_ATTRIBUTE__(x)   __attribute__((x))
+#define THREAD_ANNOTATION_ATTRIBUTE__(x)   __attribute__((x))   // __attribute__是一个编译属性，用于向编译器描述特殊的标识、错误检查或高级优化。
 #else
 #define THREAD_ANNOTATION_ATTRIBUTE__(x)   // no-op
 #endif
 
+// 使用一些宏定义对是否加锁进行检查
 #define CAPABILITY(x) \
   THREAD_ANNOTATION_ATTRIBUTE__(capability(x))
 
@@ -32,7 +30,7 @@
 
 #define GUARDED_BY(x) \
   THREAD_ANNOTATION_ATTRIBUTE__(guarded_by(x))
-//guarded_by属性是为了保证线程安全，使用该属性后，线程要使用相应变量，必须先锁定mutex_
+//guarded_by属性是为了保证线程安全，使用该属性后，线程要使用相应变量，必须先获得mutex_。
 
 #define PT_GUARDED_BY(x) \
   THREAD_ANNOTATION_ATTRIBUTE__(pt_guarded_by(x))
@@ -48,7 +46,7 @@
 
 #define REQUIRES_SHARED(...) \
   THREAD_ANNOTATION_ATTRIBUTE__(requires_shared_capability(__VA_ARGS__))
-
+// 静态分析安全
 #define ACQUIRE(...) \
   THREAD_ANNOTATION_ATTRIBUTE__(acquire_capability(__VA_ARGS__))
 
@@ -101,7 +99,8 @@ __END_DECLS
                          __assert_perror_fail (errnum, __FILE__, __LINE__, __func__);})
 
 #else  // CHECK_PTHREAD_RETURN_VALUE
-// 检查函数返回值是否为成功，失败了就终止程序。
+// ret不等于0会终止程序
+// __typeof__ 获取参数类型
 #define MCHECK(ret) ({ __typeof__ (ret) errnum = (ret);         \
                        assert(errnum == 0); (void) errnum;})
 
@@ -110,17 +109,6 @@ __END_DECLS
 namespace muduo
 {
 
-// Use as data member of a class, eg.
-//
-// class Foo
-// {
-//  public:
-//   int size() const;
-//
-//  private:
-//   mutable MutexLock mutex_;
-//   std::vector<int> data_ GUARDED_BY(mutex_);
-// };
 class CAPABILITY("mutex") MutexLock : noncopyable
 {
  public:
@@ -128,16 +116,16 @@ class CAPABILITY("mutex") MutexLock : noncopyable
   MutexLock()
     : holder_(0)
   {
-    MCHECK(pthread_mutex_init(&mutex_, NULL));
+    MCHECK(pthread_mutex_init(&mutex_, NULL));  // 成功返回0
   }
 // 析构MutexLock
   ~MutexLock()
   {
-    assert(holder_ == 0);
+    assert(holder_ == 0); // 没有任何线程获得锁
     MCHECK(pthread_mutex_destroy(&mutex_));
   }
 
-  // must be called when locked, i.e. for assertion
+  // must be called when locked, i.e. for assertion, CurrentThread::tid()运行时获得当前正在执行的线程
   bool isLockedByThisThread() const
   {
     return holder_ == CurrentThread::tid();
@@ -150,34 +138,36 @@ class CAPABILITY("mutex") MutexLock : noncopyable
 
   // internal usage
 
-// 加锁,获得锁
+  // 加锁,获得锁, ACQUIRE()表示不需要任何参数, 会有一定的静态分析
   void lock() ACQUIRE()
   {
-    MCHECK(pthread_mutex_lock(&mutex_));
-    assignHolder();
+    MCHECK(pthread_mutex_lock(&mutex_));  // 成功返回0
+    assignHolder(); // 设置hold为当前线程(刚刚获取mutex对象)
   }
-// 释放锁
+  // 释放锁
   void unlock() RELEASE()
   {
-    unassignHolder();
+    unassignHolder(); // 取消当前线程的holder
     MCHECK(pthread_mutex_unlock(&mutex_));
   }
 
+  // 返回指向mutex_的指针, 方便在condition中调用
   pthread_mutex_t* getPthreadMutex() /* non-const */
   {
     return &mutex_;
   }
 
  private:
+  // Condition对象也可以调用MutexLock的内部变量
   friend class Condition;
 
   class UnassignGuard : noncopyable
   {
    public:
-    explicit UnassignGuard(MutexLock& owner)
+    explicit UnassignGuard(MutexLock& owner)  // 用于Condition的wait, wait需要先释放锁, 包括先设置hold_ =0 
       : owner_(owner)
     {
-      owner_.unassignHolder();
+      owner_.unassignHolder();  // 暂时设置传入参数owner_.holder_ =0
     }
 
     ~UnassignGuard()
@@ -199,28 +189,24 @@ class CAPABILITY("mutex") MutexLock : noncopyable
     holder_ = CurrentThread::tid();
   }
 
+  // MutexLock核心维护一个pthread_mutex_t mutex_结构体
   pthread_mutex_t mutex_;
   pid_t holder_;
 };
 
-// Use as a stack variable, eg.
-// int Foo::size() const
-// {
-//   MutexLockGuard lock(mutex_);
-//   return data_.size();
-// }
+
 // RAII的mutex，实际上是实现了构造函数和析构函数。调用析构函数就可以释放锁
 class SCOPED_CAPABILITY MutexLockGuard : noncopyable
 {
  public:
-  explicit MutexLockGuard(MutexLock& mutex) ACQUIRE(mutex)
+  explicit MutexLockGuard(MutexLock& mutex) ACQUIRE(mutex)  // 需要mutex的显示构造函数
     : mutex_(mutex)
   {
     mutex_.lock();
   }
 
-  ~MutexLockGuard() RELEASE()
-  {
+  ~MutexLockGuard() RELEASE() // 析构函数
+  { 
     mutex_.unlock();
   }
 
@@ -233,7 +219,7 @@ class SCOPED_CAPABILITY MutexLockGuard : noncopyable
 
 // Prevent misuse like:
 // MutexLockGuard(mutex_);
-// A tempory object doesn't hold the lock for long!
+// 如果传入x了但没有调用RAII对象, 输出传入对象错误
 #define MutexLockGuard(x) error "Missing guard object name"
 
 #endif  // MUDUO_BASE_MUTEX_H

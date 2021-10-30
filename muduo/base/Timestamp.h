@@ -3,8 +3,8 @@
 //
 // Author: Shuo Chen (chenshuo at chenshuo dot com)
 
-#ifndef MUDUO_BASE_TIMESTAMP_H
-#define MUDUO_BASE_TIMESTAMP_H
+#ifndef MUDUO_BASE_TIMESTAMP_H_
+#define MUDUO_BASE_TIMESTAMP_H_
 
 #include "muduo/base/copyable.h"
 #include "muduo/base/Types.h"
@@ -16,37 +16,30 @@
 namespace muduo
 {
 
-///
+// UTC时间, 世界标准时间, 基于原子钟
 /// Time stamp in UTC, in microseconds resolution.
-///
-/// This class is immutable.
-/// It's recommended to pass it by value, since it's passed in register on x64.
-///
 
 
-// 多重继承,继承boost
-/// 针对时间戳的等价比较，小于比较
+// 多重继承,继承boost, 针对时间戳的等价比较，小于比较
 class Timestamp : public muduo::copyable,
                   public boost::equality_comparable<Timestamp>,
                   public boost::less_than_comparable<Timestamp>
 {
  public:
-  ///
-  /// Constucts an invalid Timestamp.
-  /// 时间戳的构造器
-  /// 构造一个无效时间戳
+
+  /// 构造一个无效时间戳, 时间戳就是维护的一个microSecondsSinceEpoch_
   Timestamp()
     : microSecondsSinceEpoch_(0)
   {
   }
 
   ///
-  /// Constucts a Timestamp at specific time
-  /// @param microSecondsSinceEpoch
+  /// Constucts a Timestamp at specific time, 传入参数需为微秒
   explicit Timestamp(int64_t microSecondsSinceEpochArg)
     : microSecondsSinceEpoch_(microSecondsSinceEpochArg)
   {
   }
+
   /// 交换两个对象，其实是交换内部microSecondsSinceEpoch_成员
   void swap(Timestamp& that)
   {
@@ -57,12 +50,14 @@ class Timestamp : public muduo::copyable,
 
   string toString() const;
   string toFormattedString(bool showMicroseconds = true) const;
+
   /// 有效的时间戳
   bool valid() const { return microSecondsSinceEpoch_ > 0; }
 
   // for internal usage.
   int64_t microSecondsSinceEpoch() const { return microSecondsSinceEpoch_; }
-  /// 转换成秒
+
+  /// microSecondsSinceEpoch_转换成秒
   time_t secondsSinceEpoch() const
   { return static_cast<time_t>(microSecondsSinceEpoch_ / kMicroSecondsPerSecond); }
 
@@ -103,25 +98,15 @@ inline bool operator==(Timestamp lhs, Timestamp rhs)
   return lhs.microSecondsSinceEpoch() == rhs.microSecondsSinceEpoch();
 }
 
-///
-/// Gets time difference of two timestamps, result in seconds.
-///
-/// @param high, low
-/// @return (high-low) in seconds
-/// @c double has 52-bit precision, enough for one-microsecond
-/// resolution for next 100 years.
-/// 时间差, 单位为秒
+
+/// 时间差, 单位为秒， double
 inline double timeDifference(Timestamp high, Timestamp low)
 {
   int64_t diff = high.microSecondsSinceEpoch() - low.microSecondsSinceEpoch();
   return static_cast<double>(diff) / Timestamp::kMicroSecondsPerSecond;
 }
 
-///时间戳
-/// Add @c seconds to given timestamp.
-///
-/// @return timestamp+seconds as Timestamp
-/// 当前时间戳, 增加多少秒
+/// 基于当前时间, 增加多少微秒
 inline Timestamp addTime(Timestamp timestamp, double seconds)
 {
   int64_t delta = static_cast<int64_t>(seconds * Timestamp::kMicroSecondsPerSecond);

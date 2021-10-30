@@ -81,12 +81,14 @@ void PollPoller::updateChannel(Channel* channel)
     // a new one, add to pollfds_
     assert(channels_.find(channel->fd()) == channels_.end());
     struct pollfd pfd;
+    // 将channel的内容转移到pfd中
     pfd.fd = channel->fd();
     pfd.events = static_cast<short>(channel->events());
     pfd.revents = 0;
-    pollfds_.push_back(pfd);
+    pollfds_.push_back(pfd);  // pollfds_: std::vector<struct pollfd>
     int idx = static_cast<int>(pollfds_.size())-1;
     channel->set_index(idx);
+    // 可以根据fd得到channel
     channels_[pfd.fd] = channel;
   }
   else

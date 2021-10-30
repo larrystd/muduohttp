@@ -34,12 +34,17 @@ class TimerQueue;
 
 ///
 /// Reactor, at most one per thread.
-/// one thread on loop一个网络IO线程一个循环，循环里面做着一样的事情
-/// 主线程属于main loop，创建listenfd，创建listenfd的可读回调函数，该回调函数执行accept返回交流套接字，同时new一个http对象（与交流套接字绑定），
-/// 添加进thread loop，从此这个交流套接字由thread loop负责，进行响应。
-/// 事实上每个loop是在获取activeChannels_
+/// one thread on loop一个网络IO线程一个循环，循环里面做着一样的事情。
+// 每个线程有的eventloop对象, 核心是自己的poller_, 自己的任务队列pendingFunctors_, 它就干这两件事。一个poller触发的事件, 一个任务队列的事件
+// 线程的eventloop对象的指针可以从loops_获得, 主函数只操作loops_, 就是将任务放到这个loops的pendingFunctors_, 使用这个loops_的wakefd唤醒负责loops_的线程, 主线程就可以走了。
+// 负责loops_的线程被唤醒后会执行自己的pendingFunctors_(其中包括调用poller epoll_ctl fd, 使用std将函数和参数绑定后所有函数均可视为std::function<void()>)
+// 子线程继续循环eventloop, 这时候如果自己负责的fd可读就可以处理了。
 
-
+// 一个连接会有一个channel, 和TcpConnection, channel偏底层, Connection用来封装上层, 实际是还是poller直接触发channel调Connection的用户自定义函数。poller有连接到channel(进一步线程有链接到channel), poller活跃意味着所属的channel出现活跃
+// Connection对象在堆中创建, 具有std::unique_ptr<Channel>, 它会把用户定义函数以及非用户定义函数(比如read)用参数注册到Channel中。poll活跃, 线程会调用handleEventWithGuard自动处理Channel中的回调函数
+// 通信过程实际上只有eventloop, poller, channel三者交互, 执行channel的回调函数是TcpConnection定义的。
+// 
+// Acceptor, Connection是建立连接时调用的, TcpServer和TcpConnection起到调度线程和协调从建立连接的Acceptor到通信Channel的功能, 算是主线程执行的工作。
 ///
 /// This is an interface class, so don't expose too much details.
 class EventLoop : noncopyable

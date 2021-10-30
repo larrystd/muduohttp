@@ -47,7 +47,7 @@ class Channel : noncopyable
   // 事件处理函数，传入接收时间
   void handleEvent(Timestamp receiveTime);
 
-  // 设置回调函数，分别是写回调，读回调，关闭回调，错误回调
+  // 设置channel回调函数，直接对接poll, 分别是写回调，读回调，关闭回调，错误回调
   void setReadCallback(ReadEventCallback cb)
   { readCallback_ = std::move(cb); }
   void setWriteCallback(EventCallback cb)
@@ -57,7 +57,7 @@ class Channel : noncopyable
   void setErrorCallback(EventCallback cb)
   { errorCallback_ = std::move(cb); }
 
-  /// 传入shared_ptr对象 绑定const std::shared_ptr<void>& obj
+  /// 传入shared_ptr对象(实际是TcpConection) 绑定const std::shared_ptr<void>& obj
   void tie(const std::shared_ptr<void>&);
 
 
@@ -104,7 +104,7 @@ class Channel : noncopyable
   static const int kReadEvent;
   static const int kWriteEvent;
 
-  // eventloop对象
+  // 存在于每个线程的eventloop对象
   EventLoop* loop_;
   // 文件描述符
   const int  fd_;

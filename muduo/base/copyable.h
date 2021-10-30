@@ -1,13 +1,9 @@
-#ifndef MUDUO_BASE_COPYABLE_H
-#define MUDUO_BASE_COPYABLE_H
+#ifndef MUDUO_BASE_COPYABLE_H_
+#define MUDUO_BASE_COPYABLE_H_
 
 namespace muduo
 {
-
-/// A tag class emphasises the objects are copyable.
-/// The empty base class optimization applies.
-/// Any derived class of copyable should be a value type.
-/// 构造函数和析构函数设置为protected + default方便继承者调用
+/// 构造函数和析构函数设置为protected + default, 继承者可以正常实现构造函数和析构函数
 class copyable
 {
  protected:
@@ -17,4 +13,4 @@ class copyable
 
 }  // namespace muduo
 
-#endif  // MUDUO_BASE_COPYABLE_H
+#endif  // MUDUO_BASE_COPYABLE_H_

@@ -79,9 +79,9 @@ EventLoop::EventLoop()
     eventHandling_(false),
     callingPendingFunctors_(false),
     iteration_(0),
-    /// 构造thread_loop的线程id
+    /// 构造thread_loop对象的线程id, 一般就是子线程
     threadId_(CurrentThread::tid()),
-
+    // 创建一个poller_对象, 一个子线程会有一个eventloop, 一个eventloop会有一个poller_, 
     poller_(Poller::newDefaultPoller(this)),
     timerQueue_(new TimerQueue(this)),
     /// 创建wakeupFd_
@@ -101,11 +101,10 @@ EventLoop::EventLoop()
   {
     t_loopInThisThread = this;
   }
-  /// eventloop会阻塞在epoll_wait, 被唤醒之后调用的回调函数
-  /// wakeupChannel_ 读的回调函数
+  /// wakeChannel如果被唤醒, 调用&EventLoop::handleRead
   wakeupChannel_->setReadCallback(
       std::bind(&EventLoop::handleRead, this));
-  // wakeupfd可读, 并调poller ->update中更新之
+  // 设置wakeupfd可读, 注意在eventloop创建时就设置了, 也就是说这是在子线程内部loop中设置一个wakechannel
   wakeupChannel_->enableReading();
 }
 
@@ -127,7 +126,7 @@ EventLoop::~EventLoop()
 void EventLoop::loop()
 {
   assert(!looping_);
-  /// 该线程是创建eventloop的线程
+  /// 该线程是创建eventloop的线程(每个子线程都可以)
   assertInLoopThread();
   looping_ = true;
   quit_ = false;  // FIXME: what if someone calls quit() before loop() ?
@@ -139,7 +138,7 @@ void EventLoop::loop()
 
     /// 使用poller_->poll获取活跃的fd所属的activeChannels_，调用注册回调函数handleEvent。
     activeChannels_.clear();
-    /// 一般的会阻塞在poll直到有活跃的channel
+    /// 一般的会阻塞在poll直到有活跃的channel, 注意这只是影响的channel对象
     pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_); 
     ++iteration_;
     /// 打印活跃的channel
@@ -148,7 +147,7 @@ void EventLoop::loop()
       printActiveChannels();
     }
     // TODO sort channel by priority
-    // 执行活跃函数的回调函数
+    // 执行活跃函数的回调函数，注意对每一个子函数
     eventHandling_ = true;
     for (Channel* channel : activeChannels_)
     {
@@ -203,13 +202,12 @@ void EventLoop::runInLoop(Functor cb)
 /// 将任务加入到任务队列中
 void EventLoop::queueInLoop(Functor cb)
 {
-  /// pendingFunctors_的函数列表
+  /// 主线程会调用runInLoop, 进而调用queueInLoop, 但loop对象是子线程的, 因此cb会到子线程的pendingFunctors_中
   {
   MutexLockGuard lock(mutex_);
   pendingFunctors_.push_back(std::move(cb));
   }
-  /// 非io线程, 或callingPendingFunctors_(调用doPendingFunctors可获得)
-  /// 如果调用了callingPendingFunctors_， 则再次唤醒
+  // 这里头还是主线程, 会调用wakeup
   if (!isInLoopThread() || callingPendingFunctors_)
   {
     /// 唤醒eventloop的epoll_wait等待事件触发, 从而让eventloop线程自动执行任务队列pendingFunctors_中的函数
@@ -292,7 +290,7 @@ void EventLoop::abortNotInLoopThread()
 void EventLoop::wakeup()
 {
   uint64_t one = 1;
-  /// 使wakeupFd_可读
+  /// 主线程调用, 但wakeupFd_却是子线程的, 结果就是主线程调sockets::write(wakeupFd_, 被对应子线程的poller接收, 起到了唤醒的作用
   ssize_t n = sockets::write(wakeupFd_, &one, sizeof one);
   if (n != sizeof one)
   {
@@ -316,7 +314,6 @@ void EventLoop::doPendingFunctors()
 {
   /// 新建一个functor
   std::vector<Functor> functors;
-  /// 需要唤醒epoll_wait了
   callingPendingFunctors_ = true;
   /// CAS操作， 有可能线程正在执行pendingFunctors_, 因此需要CAS防止竞态
   {

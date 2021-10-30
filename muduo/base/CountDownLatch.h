@@ -1,24 +1,18 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-//
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
-#ifndef MUDUO_BASE_COUNTDOWNLATCH_H
-#define MUDUO_BASE_COUNTDOWNLATCH_H
+#ifndef MUDUO_BASE_COUNTDOWNLATCH_H_
+#define MUDUO_BASE_COUNTDOWNLATCH_H_
 
 #include "muduo/base/Condition.h"
 #include "muduo/base/Mutex.h"
 
-// 实现倒计时的定时器
-
 namespace muduo
 {
 
+// 倒计时
 class CountDownLatch : noncopyable
 {
  public:
 
-  explicit CountDownLatch(int count);
+  explicit CountDownLatch(int count); // 只能用int构造
 
   void wait();
 
@@ -27,10 +21,11 @@ class CountDownLatch : noncopyable
   int getCount() const;
 
  private:
-  mutable MutexLock mutex_;
-  Condition condition_ GUARDED_BY(mutex_);
-  int count_ GUARDED_BY(mutex_);
+  // 三个属性, mutex_, condition_, count_
+  mutable MutexLock mutex_;   // mutable MutexLock, mutable在类中修饰成员变量, 那么const函数中可以修改这个成员变量(mutex自然是mutable)
+  Condition condition_ GUARDED_BY(mutex_);  // GUARDED_BY(mutex_), 表示在使用condition_之前必须用mutex_保护
+  int count_ GUARDED_BY(mutex_);  
 };
 
 }  // namespace muduo
-#endif  // MUDUO_BASE_COUNTDOWNLATCH_H
+#endif  // MUDUO_BASE_COUNTDOWNLATCH_H_

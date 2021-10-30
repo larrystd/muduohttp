@@ -64,11 +64,11 @@ class Poller : noncopyable
 
  protected:
  /// 一个fd->channel 的map
-  typedef std::map<int, Channel*> ChannelMap;
+  typedef std::map<int, Channel*> ChannelMap; // poller和Channel是相连接的, 进而线程与channel链接
   ChannelMap channels_;
 
  private:
-  EventLoop* ownerLoop_;
+  EventLoop* ownerLoop_;  // 指向所属的loop
 };
 
 }  // namespace net

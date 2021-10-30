@@ -47,14 +47,16 @@ TcpConnection::TcpConnection(EventLoop* loop,
     
     reading_(true),
     socket_(new Socket(sockfd)),
-    /// 构造channel_对象
+    /// 构造channel_对象, Channel存在堆上
     channel_(new Channel(loop, sockfd)),
     localAddr_(localAddr),
     peerAddr_(peerAddr),
     highWaterMark_(64*1024*1024)
 {
-  /// 在channel中设置回调函数
-  /// 可读回调函数
+  // 在channel中设置TcpConnection回调函数
+  // eventloop有活跃fd之后首先调channel, channel根据条件调&TcpConnection::handleRead等函数。
+
+  // 主语ReadCallback会多于messageCallback_, 比如会执行所有read到buffer中再调用messageCallback_
   channel_->setReadCallback(
       std::bind(&TcpConnection::handleRead, this, _1));
   /// 可写回调
@@ -329,16 +331,17 @@ void TcpConnection::stopReadInLoop()
   }
 }
 
-/// 连接建立函数, 
-/// 注册TcpConnection的channel到loop poller的epoll
+// 连接建立函数,这个函数子线程来执行 
+// 子线程调用&TcpConnection::connectEstablished会传入conn作为this, conn内部有loop_指针(指向子线程内部loop对象, 这个loop_指针是从loop池子里拿出的)
+// channel_里面也有这样的loop_指针
 void TcpConnection::connectEstablished()
 {
   loop_->assertInLoopThread();
   assert(state_ == kConnecting);
   setState(kConnected);
-  // channel绑定到Connection, 后者用shared_ptr维护
+  // channel绑定到Connection,实现channel到Connection的调用 shared_from_this是维护Connection堆对象
   channel_->tie(shared_from_this());
-  /// 设置TcpConnection的channel, 向poller注册监听的fd
+  /// channel_中有指向子线程loop的指针, 调用之用子线程的poller注册监听的fd。从而注册到了子线程身上
   channel_->enableReading();
   /// 连接回调函数
   connectionCallback_(shared_from_this());

@@ -48,9 +48,11 @@ void EventLoopThreadPool::start(const ThreadInitCallback& cb)
 
     // 构造EventLoopThread对象, 初始化thread对象执行函数
     EventLoopThread* t = new EventLoopThread(cb, buf);
-    /// threads 列表
+    /// t加入threads 列表, 注意t对象在堆上
     threads_.push_back(std::unique_ptr<EventLoopThread>(t));
-    /// 创建新线程执行startLoop()函数,子线程创建loop对象并执行loop(), 主线程返回子线程的loop对象
+    /// 新线程t执行startLoop()函数,子线程创建loop对象并执行这个loop(), 主线程得到子线程的loop对象指针, 
+    // 线程指针加入loops_。loops是一个std::vector<EventLoop*>, 子线程正阻塞在loop中。
+    // 这里不知不觉的主线程创建的EventLoopThread对象交由了子线程
     loops_.push_back(t->startLoop());
   }
   /// 不创建新线程， 当前线程执行cb

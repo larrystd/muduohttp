@@ -1,18 +1,13 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-//
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/base/Exception.h"
 #include "muduo/base/CurrentThread.h"
 
 namespace muduo
 {
 
+// 发生异常, 输入msg, stack_为当前线程栈帧情况, 来自CurrentThread::stackTrace
 Exception::Exception(string msg)
   : message_(std::move(msg)),
-  /// 异常
-    stack_(CurrentThread::stackTrace(/*demangle=*/false))
+    stack_(CurrentThread::stackTrace(false))
 {
 }
 

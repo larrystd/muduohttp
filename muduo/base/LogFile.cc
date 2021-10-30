@@ -129,7 +129,7 @@ string LogFile::getLogFileName(const string& basename, time_t* now)
   strftime(timebuf, sizeof timebuf, ".%Y%m%d-%H%M%S.", &tm);
   filename += timebuf;
 
-  filename += ProcessInfo::hostname();
+  filename += ProcessInfo::hostname();  // 获取进程的主机名
 
   char pidbuf[32];
   snprintf(pidbuf, sizeof pidbuf, ".%d", ProcessInfo::pid());

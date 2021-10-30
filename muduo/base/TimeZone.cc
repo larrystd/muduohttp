@@ -4,20 +4,19 @@
 // Author: Shuo Chen (chenshuo at chenshuo dot com)
 
 #include "muduo/base/TimeZone.h"
-#include "muduo/base/noncopyable.h"
-#include "muduo/base/Date.h"
+
+#include <assert.h>
+#include <endian.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include <algorithm>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
-#include <assert.h>
-//#define _BSD_SOURCE
-#include <endian.h>
-
-#include <stdint.h>
-#include <stdio.h>
+#include "muduo/base/noncopyable.h"
+#include "muduo/base/Date.h"
 
 namespace muduo
 {
@@ -26,8 +25,8 @@ namespace detail
 
 struct Transition
 {
-  time_t gmttime;
-  time_t localtime;
+  time_t gmttime; // 1970之后Greenwich Mean Time 格林威治标准时间是指位于英国伦敦郊区的皇家格林威治天文台的标准时间，因为本初子午线被定义在通过那裡的经线。
+  time_t localtime; // 当地时间
   int localtimeIdx;
 
   Transition(time_t t, time_t l, int localIdx)
@@ -64,7 +63,7 @@ struct Comp
 
 struct Localtime
 {
-  time_t gmtOffset;
+  time_t gmtOffset; // gmt时间到local的偏移
   bool isDst;
   int arrbIdx;
 
@@ -73,7 +72,7 @@ struct Localtime
   { }
 };
 
-inline void fillHMS(unsigned seconds, struct tm* utc)
+inline void fillHMS(unsigned seconds, struct tm* utc)   // tm是日期+时间结构体, 将输入的秒数转为时, 分, 秒
 {
   utc->tm_sec = seconds % 60;
   unsigned minutes = seconds / 60;
@@ -82,18 +81,19 @@ inline void fillHMS(unsigned seconds, struct tm* utc)
 }
 
 }  // namespace detail
-const int kSecondsPerDay = 24*60*60;
+
+const int kSecondsPerDay = 24*60*60;  // 一天的秒数
 }  // namespace muduo
 
 using namespace muduo;
 using namespace std;
 
-struct TimeZone::Data
+struct TimeZone::Data // data结构体, 存储transitions和localtimes
 {
-  vector<detail::Transition> transitions;
-  vector<detail::Localtime> localtimes;
+  vector<detail::Transition> transitions; // 时间数组
+  vector<detail::Localtime> localtimes; // 本地时间相对于gmt的偏移
   vector<string> names;
-  string abbreviation;
+  string abbreviation;  // 简写
 };
 
 namespace muduo
@@ -101,6 +101,8 @@ namespace muduo
 namespace detail
 {
 
+
+// 读取时区文件
 class File : noncopyable
 {
  public:
@@ -150,6 +152,8 @@ class File : noncopyable
   FILE* fp_;
 };
 
+
+// 时区文件读取, 将内容合理加入到TimeZone::Data中, 即data->transitions, data->localtimes,data->abbreviation
 bool readTimeZoneFile(const char* zonefile, struct TimeZone::Data* data)
 {
   File f(zonefile);
@@ -220,6 +224,7 @@ bool readTimeZoneFile(const char* zonefile, struct TimeZone::Data* data)
   return true;
 }
 
+// 从localtimes查找本地时区, 获取Localtime*,  里面有相对gmt的偏移量等信息
 const Localtime* findLocaltime(const TimeZone::Data& data, Transition sentry, Comp comp)
 {
   const Localtime* local = NULL;
@@ -231,10 +236,12 @@ const Localtime* findLocaltime(const TimeZone::Data& data, Transition sentry, Co
   }
   else
   {
+    // 从data.transitions二分查找到sentry
     vector<Transition>::const_iterator transI = lower_bound(data.transitions.begin(),
                                                             data.transitions.end(),
                                                             sentry,
                                                             comp);
+    // 如果找到了
     if (transI != data.transitions.end())
     {
       if (!comp.equal(sentry, *transI))
@@ -242,6 +249,7 @@ const Localtime* findLocaltime(const TimeZone::Data& data, Transition sentry, Co
         assert(transI != data.transitions.begin());
         --transI;
       }
+      // 找到本地时间
       local = &data.localtimes[transI->localtimeIdx];
     }
     else
@@ -258,6 +266,8 @@ const Localtime* findLocaltime(const TimeZone::Data& data, Transition sentry, Co
 }  // namespace muduo
 
 
+// 以下是TimeZone 类的实现
+// 用时区文件构造
 TimeZone::TimeZone(const char* zonefile)
   : data_(new TimeZone::Data)
 {
@@ -267,27 +277,29 @@ TimeZone::TimeZone(const char* zonefile)
   }
 }
 
+// 直接将某个时区输入进去
 TimeZone::TimeZone(int eastOfUtc, const char* name)
   : data_(new TimeZone::Data)
 {
-  data_->localtimes.push_back(detail::Localtime(eastOfUtc, false, 0));
+  data_->localtimes.push_back(detail::Localtime(eastOfUtc, false, 0));  // eastOfUtc 本地时间加入到localtimes之中
   data_->abbreviation = name;
 }
 
-struct tm TimeZone::toLocalTime(time_t seconds) const
+struct tm TimeZone::toLocalTime(time_t seconds) const // 将gmt的time_t转为本地时间tm
 {
   struct tm localTime;
-  memZero(&localTime, sizeof(localTime));
+  memZero(&localTime, sizeof(localTime)); // 赋0
   assert(data_ != NULL);
   const Data& data(*data_);
 
-  detail::Transition sentry(seconds, 0, 0);
+  detail::Transition sentry(seconds, 0, 0); // 创建时间转换对象sentry
   const detail::Localtime* local = findLocaltime(data, sentry, detail::Comp(true));
-
+  // 找到了本地时区
   if (local)
   {
-    time_t localSeconds = seconds + local->gmtOffset;
-    ::gmtime_r(&localSeconds, &localTime); // FIXME: fromUtcTime
+    time_t localSeconds = seconds + local->gmtOffset; // 转换成本地时间的秒数
+    ::gmtime_r(&localSeconds, &localTime); // FIXME: fromUtcTime, 将time_t转为结构体tm
+    // 本地时间结构体tm
     localTime.tm_isdst = local->isDst;
     localTime.tm_gmtoff = local->gmtOffset;
     localTime.tm_zone = &data.abbreviation[local->arrbIdx];
@@ -296,7 +308,7 @@ struct tm TimeZone::toLocalTime(time_t seconds) const
   return localTime;
 }
 
-time_t TimeZone::fromLocalTime(const struct tm& localTm) const
+time_t TimeZone::fromLocalTime(const struct tm& localTm) const // 本地时间tm转为gmt的time_t
 {
   assert(data_ != NULL);
   const Data& data(*data_);
@@ -319,12 +331,12 @@ time_t TimeZone::fromLocalTime(const struct tm& localTm) const
   return seconds - local->gmtOffset;
 }
 
-struct tm TimeZone::toUtcTime(time_t secondsSinceEpoch, bool yday)
+struct tm TimeZone::toUtcTime(time_t secondsSinceEpoch, bool yday)  // secondsSinceEpoch转为Utc时间
 {
   struct tm utc;
   memZero(&utc, sizeof(utc));
   utc.tm_zone = "GMT";
-  int seconds = static_cast<int>(secondsSinceEpoch % kSecondsPerDay);
+  int seconds = static_cast<int>(secondsSinceEpoch % kSecondsPerDay); // 只有days和seconds
   int days = static_cast<int>(secondsSinceEpoch / kSecondsPerDay);
   if (seconds < 0)
   {

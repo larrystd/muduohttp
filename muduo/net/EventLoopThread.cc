@@ -15,9 +15,9 @@ using namespace muduo::net;
 
 EventLoopThread::EventLoopThread(const ThreadInitCallback& cb,
                                  const string& name)
-  : loop_(NULL),
+  : loop_(NULL),  // loop_是指针, 指向子线程所运行的loop_对象
     exiting_(false),
-    //初始化时 绑定线程执行的函数, EventLoopThread::threadFunc
+    //初始化时 注册绑定线程执行的函数, EventLoopThread::threadFunc
     thread_(std::bind(&EventLoopThread::threadFunc, this), name),
     mutex_(),
     cond_(mutex_),
@@ -41,8 +41,7 @@ EventLoopThread::~EventLoopThread()
 EventLoop* EventLoopThread::startLoop()
 {
   assert(!thread_.started());
-  // 开启新线程thread执行start()
-  /// 线程执行绑定好的函数, 即threadFunc()
+  // 新线程t执行start() 线程执行绑定好的函数(新线程内部有同样的EventLoopThread，但是一个引用, 和主线程都是一个对象), 即threadFunc()。这句话本身创建一个线程执行指定函数, 主线程进行向下执行
   thread_.start();
 
   EventLoop* loop = NULL;
@@ -63,7 +62,7 @@ EventLoop* EventLoopThread::startLoop()
 // 新线程执行的函数
 void EventLoopThread::threadFunc()
 {
-   /// 在线程栈上运行的eventloop， 创建eventloop对象
+   /// 新线程栈上创建eventloop对象, 关键啊
   EventLoop loop;
 
   if (callback_)
@@ -74,11 +73,12 @@ void EventLoopThread::threadFunc()
 
   {
     MutexLockGuard lock(mutex_);
+    // loop_指向线程内部的loop对象
     loop_ = &loop;
     /// 唤醒主线程返回loop
     cond_.notify();
   }
-  // 线程执行loop循环
+  // 新线程执行loop循环
   loop.loop();
   //assert(exiting_);
   MutexLockGuard lock(mutex_);

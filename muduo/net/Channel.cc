@@ -21,7 +21,8 @@ const int Channel::kNoneEvent = 0;
 const int Channel::kReadEvent = POLLIN | POLLPRI; // 01 | 10 = 11
 const int Channel::kWriteEvent = POLLOUT; // 100
 
-
+// channel中的loop是每个子线程的loop对象的指针
+// fd是连接, 每个连接都会有一个channel
 Channel::Channel(EventLoop* loop, int fd__)
   : loop_(loop),
     fd_(fd__),
@@ -45,6 +46,7 @@ Channel::~Channel()
   }
 }
 
+/// 会被TcpConnection调用, 表示绑定了TcpConnection(shared_from_this)
 void Channel::tie(const std::shared_ptr<void>& obj)
 {
   tie_ = obj;
@@ -72,8 +74,8 @@ void Channel::handleEvent(Timestamp receiveTime)
   std::shared_ptr<void> guard;
   if (tied_)
   {
-    // 如果绑定了对象，要看对象是否存活
-    // 如果对象存在，lock()函数返回一个指向共享对象的shared_ptr，否则返回一个空shared_ptr。
+    // 绑定了TcpConnection,是通过shared_from_this的, 这要看对象是否存活
+    // 如果对象存活，lock()函数返回一个指向共享对象的shared_ptr，否则返回一个空shared_ptr。
     guard = tie_.lock();
     if (guard)
     {
@@ -81,6 +83,7 @@ void Channel::handleEvent(Timestamp receiveTime)
     }
   }
   else
+  // 例如wakechannel就没有tie_,
   {
     handleEventWithGuard(receiveTime);
   }

@@ -1,9 +1,5 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-//
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/base/Date.h"
+
 #include <stdio.h>  // snprintf
 #include <time.h>  // struct tm
 
@@ -18,7 +14,7 @@ char require_32_bit_integer_at_least[sizeof(int) >= sizeof(int32_t) ? 1 : -1];
 // http://www.faqs.org/faqs/calendars/faq/part2/
 // http://blog.csdn.net/Solstice
 
-/// YearMonthDay结构转为julianDayNumber
+/// YearMonthDay结构转为julianDayNumber, 格里历日期的中午时候
 int getJulianDayNumber(int year, int month, int day)
 {
   (void) require_32_bit_integer_at_least; // no warning please
@@ -43,7 +39,7 @@ struct Date::YearMonthDay getYearMonthDay(int julianDayNumber)
   ymd.year = b * 100 + d - 4800 + (m / 10);
   return ymd;
 }
-}  // namespace detail
+}  // namespace detail, 1970.1.1的JD
 const int Date::kJulianDayOf1970_01_01 = detail::getJulianDayNumber(1970, 1, 1);
 }  // namespace muduo
 
@@ -66,7 +62,7 @@ Date::Date(const struct tm& t)
 string Date::toIsoString() const
 {
   char buf[32];
-  YearMonthDay ymd(yearMonthDay());
+  YearMonthDay ymd(yearMonthDay()); // 年月日格式化到buf中
   snprintf(buf, sizeof buf, "%4d-%02d-%02d", ymd.year, ymd.month, ymd.day);
   return buf;
 }

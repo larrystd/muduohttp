@@ -124,10 +124,10 @@ void EPollPoller::fillActiveChannels(int numEvents,
 void EPollPoller::updateChannel(Channel* channel)
 {
   Poller::assertInLoopThread();
-  const int index = channel->index();
+  const int index = channel->index(); 
   LOG_TRACE << "fd = " << channel->fd()
     << " events = " << channel->events() << " index = " << index;
-  if (index == kNew || index == kDeleted)
+  if (index == kNew || index == kDeleted) // 判断操作是什么
   {
     // a new one, add with EPOLL_CTL_ADD
     int fd = channel->fd();
@@ -142,7 +142,7 @@ void EPollPoller::updateChannel(Channel* channel)
       assert(channels_.find(fd) != channels_.end());
       assert(channels_[fd] == channel);
     }
-    // 添加操作
+    // 添加fd操作
     channel->set_index(kAdded);
 
     /// 在epoll中添加注册channel的fd
@@ -164,7 +164,7 @@ void EPollPoller::updateChannel(Channel* channel)
     }
     else
     {
-      update(EPOLL_CTL_MOD, channel);
+      update(EPOLL_CTL_MOD, channel); // 修改channel的状态
     }
   }
 }
@@ -193,7 +193,7 @@ void EPollPoller::removeChannel(Channel* channel)
   channel->set_index(kNew);
 }
 
-/// 更新poll的fd, ::epoll_ctl更新fd_的事件
+/// 根据操作operation更新poll的fd, ::epoll_ctl更新fd_的事件
 void EPollPoller::update(int operation, Channel* channel)
 {
   /// epoll_event 类型
@@ -206,7 +206,8 @@ void EPollPoller::update(int operation, Channel* channel)
   int fd = channel->fd();
   LOG_TRACE << "epoll_ctl op = " << operationToString(operation)
     << " fd = " << fd << " event = { " << channel->eventsToString() << " }";
-  if (::epoll_ctl(epollfd_, operation, fd, &event) < 0)
+
+  if (::epoll_ctl(epollfd_, operation, fd, &event) < 0) // 增加fd或者修改fd的状态, 都是调用epoll_ctl函数
   {
     if (operation == EPOLL_CTL_DEL)
     {

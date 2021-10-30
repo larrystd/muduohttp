@@ -1,8 +1,3 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-//
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/base/CurrentThread.h"
 
 #include <cxxabi.h>
@@ -13,18 +8,19 @@ namespace muduo
 {
 namespace CurrentThread
 {
+// 设置CurrentThread.h声明的变量  
 __thread int t_cachedTid = 0;
 __thread char t_tidString[32];
 __thread int t_tidStringLength = 6;
 __thread const char* t_threadName = "unknown";
 static_assert(std::is_same<int, pid_t>::value, "pid_t should be int");
 
-string stackTrace(bool demangle)
+string stackTrace(bool demangle)  // 基于backtrace, backtrace_symbols, __cxa_demangle获得调用栈
 {
   string stack;
   const int max_frames = 200;
   void* frame[max_frames];
-  int nptrs = ::backtrace(frame, max_frames);
+  int nptrs = ::backtrace(frame, max_frames);   // 可以返回当前入栈情况, char**strings是一个字符串数组
   char** strings = ::backtrace_symbols(frame, nptrs);
   if (strings)
   {
@@ -50,7 +46,7 @@ string stackTrace(bool demangle)
         {
           *plus = '\0';
           int status = 0;
-          char* ret = abi::__cxa_demangle(left_par+1, demangled, &len, &status);
+          char* ret = abi::__cxa_demangle(left_par+1, demangled, &len, &status);    // 可以获得函数原型
           *plus = '+';
           if (status == 0)
           {
