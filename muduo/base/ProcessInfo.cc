@@ -1,8 +1,3 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-//
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/base/ProcessInfo.h"
 #include "muduo/base/CurrentThread.h"
 #include "muduo/base/FileUtil.h"
@@ -22,10 +17,10 @@ namespace muduo
 {
 namespace detail
 {
-__thread int t_numOpenedFiles = 0;
-int fdDirFilter(const struct dirent* d)
+__thread int t_numOpenedFiles = 0;  // 线程内部变量, 打开的文件fd
+int fdDirFilter(const struct dirent* d) // dirent, 相当于目录结构体
 {
-  if (::isdigit(d->d_name[0]))
+  if (::isdigit(d->d_name[0]))  // d_name第一个字符为数字
   {
     ++t_numOpenedFiles;
   }
@@ -37,7 +32,7 @@ int taskDirFilter(const struct dirent* d)
 {
   if (::isdigit(d->d_name[0]))
   {
-    t_pids->push_back(atoi(d->d_name));
+    t_pids->push_back(atoi(d->d_name)); // 进程筛选
   }
   return 0;
 }
@@ -45,12 +40,12 @@ int taskDirFilter(const struct dirent* d)
 int scanDir(const char *dirpath, int (*filter)(const struct dirent *))
 {
   struct dirent** namelist = NULL;
-  int result = ::scandir(dirpath, &namelist, filter, alphasort);
+  int result = ::scandir(dirpath, &namelist, filter, alphasort);  // scandir扫描dir目录下以及dir子目录下满足filter过滤模式的文件，返回的结果是compare函数经过排序的，并保存在 namelist中
   assert(namelist == NULL);
   return result;
 }
 
-Timestamp g_startTime = Timestamp::now();
+Timestamp g_startTime = Timestamp::now(); // 当前时间
 // assume those won't change during the life time of a process.
 int g_clockTicks = static_cast<int>(::sysconf(_SC_CLK_TCK));
 int g_pageSize = static_cast<int>(::sysconf(_SC_PAGE_SIZE));
@@ -62,10 +57,10 @@ using namespace muduo::detail;
 
 pid_t ProcessInfo::pid()
 {
-  return ::getpid();
+  return ::getpid();  // 当前进程pid
 }
 
-string ProcessInfo::pidString()
+string ProcessInfo::pidString() // 格式化当前进程pid
 {
   char buf[32];
   snprintf(buf, sizeof buf, "%d", pid());
@@ -74,7 +69,7 @@ string ProcessInfo::pidString()
 
 uid_t ProcessInfo::uid()
 {
-  return ::getuid();
+  return ::getuid();  // 当前进程uid
 }
 
 string ProcessInfo::username()
@@ -121,7 +116,7 @@ bool ProcessInfo::isDebugBuild()
 #endif
 }
 
-string ProcessInfo::hostname()
+string ProcessInfo::hostname()  // 当前进程的hostname
 {
   // HOST_NAME_MAX 64
   // _POSIX_HOST_NAME_MAX 255
@@ -142,7 +137,7 @@ string ProcessInfo::procname()
   return procname(procStat()).as_string();
 }
 
-StringPiece ProcessInfo::procname(const string& stat)
+StringPiece ProcessInfo::procname(const string& stat) // 从/proc/self/stat得到进程名
 {
   StringPiece name;
   size_t lp = stat.find('(');
@@ -154,7 +149,7 @@ StringPiece ProcessInfo::procname(const string& stat)
   return name;
 }
 
-string ProcessInfo::procStatus()
+string ProcessInfo::procStatus()  // 调用/proc/self/status, 返回状态
 {
   string result;
   FileUtil::readFile("/proc/self/status", 65536, &result);
@@ -168,7 +163,7 @@ string ProcessInfo::procStat()
   return result;
 }
 
-string ProcessInfo::threadStat()
+string ProcessInfo::threadStat()  // 当前线程的状态
 {
   char buf[64];
   snprintf(buf, sizeof buf, "/proc/self/task/%d/stat", CurrentThread::tid());
@@ -189,7 +184,7 @@ string ProcessInfo::exePath()
   return result;
 }
 
-int ProcessInfo::openedFiles()
+int ProcessInfo::openedFiles()  // 当前进程打开的fd, 是一个目录。调用ls /proc/self/fd
 {
   t_numOpenedFiles = 0;
   scanDir("/proc/self/fd", fdDirFilter);
@@ -222,7 +217,7 @@ ProcessInfo::CpuTime ProcessInfo::cpuTime()
   return t;
 }
 
-int ProcessInfo::numThreads()
+int ProcessInfo::numThreads() // 当前进程中的threads, 可以从cat /proc/self/status 的threads一行看到
 {
   int result = 0;
   string status = procStatus();
@@ -234,7 +229,7 @@ int ProcessInfo::numThreads()
   return result;
 }
 
-std::vector<pid_t> ProcessInfo::threads()
+std::vector<pid_t> ProcessInfo::threads()   // 调用ls /proc/self/task可以显示线程, 数量等于numThreads()
 {
   std::vector<pid_t> result;
   t_pids = &result;

@@ -1,12 +1,5 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is a public header file, it must only include public header files.
-
-#ifndef MUDUO_BASE_PROCESSINFO_H
-#define MUDUO_BASE_PROCESSINFO_H
+#ifndef MUDUO_BASE_PROCESSINFO_H_
+#define MUDUO_BASE_PROCESSINFO_H_
 
 #include "muduo/base/StringPiece.h"
 #include "muduo/base/Types.h"
@@ -29,14 +22,15 @@ namespace ProcessInfo
   int pageSize();
   bool isDebugBuild();  // constexpr
 
-  string hostname();
+  //name
+  string hostname();  
   string procname();
   StringPiece procname(const string& stat);
 
-  /// read /proc/self/status
+  /// read /proc/self/status, 当前进程状态
   string procStatus();
 
-  /// read /proc/self/stat
+  /// read /proc/self/stat, 作用同上
   string procStat();
 
   /// read /proc/self/task/tid/stat
@@ -60,9 +54,9 @@ namespace ProcessInfo
   CpuTime cpuTime();
 
   int numThreads();
-  std::vector<pid_t> threads();
+  std::vector<pid_t> threads(); // 执行的线程
 }  // namespace ProcessInfo
 
 }  // namespace muduo
 
-#endif  // MUDUO_BASE_PROCESSINFO_H
+#endif  // MUDUO_BASE_PROCESSINFO_H_

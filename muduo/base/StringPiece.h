@@ -49,6 +49,7 @@ namespace muduo
 {
 
 // For passing C-style string argument to a function.
+// 支持const char* 和string对象构建StringArg, 对于输入为"abc"形式只需要const char*构造而不用拷贝
 class StringArg // copyable
 {
  public:
@@ -112,6 +113,7 @@ class StringPiece {
 
   char operator[](int i) const { return ptr_[i]; }
 
+  // 掩盖若干前缀后缀, 并未删除
   void remove_prefix(int n) {
     ptr_ += n;
     length_ -= n;
@@ -149,6 +151,7 @@ class StringPiece {
     return r;
   }
 
+  // 转换到string
   string as_string() const {
     return string(data(), size());
   }

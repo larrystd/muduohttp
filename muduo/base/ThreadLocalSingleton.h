@@ -1,10 +1,5 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-//
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
-#ifndef MUDUO_BASE_THREADLOCALSINGLETON_H
-#define MUDUO_BASE_THREADLOCALSINGLETON_H
+#ifndef MUDUO_BASE_THREADLOCALSINGLETON_H_
+#define MUDUO_BASE_THREADLOCALSINGLETON_H_
 
 #include "muduo/base/noncopyable.h"
 
@@ -25,14 +20,15 @@ class ThreadLocalSingleton : noncopyable
   /// 获取线程私有变量的唯一intance
   static T& instance()
   {
-    if (!t_value_)
+    if (!t_value_)  // 线程安全, 因为t_value_本身就是线程内部对象,
     {
-      t_value_ = new T(); // 线程内部对象
-      deleter_.set(t_value_); /// 置入线程
+      t_value_ = new T(); // 每个线程都可以具有单例模式, 单例对每个线程来说的
+      deleter_.set(t_value_); /// t_value_作为线程私有变量置入线程, 其为线程内部指针指向单例对象
     }
     return *t_value_;
   }
 
+  // point()函数返回指针T*
   static T* pointer()
   {
     return t_value_;
@@ -54,28 +50,29 @@ class ThreadLocalSingleton : noncopyable
    
     Deleter()
     {
-    // 创建单独的线程变量的键pkey_, 清理函数为destructor线程释放该线程存储的时候被调用。
+    // 存储线程私有变量&key, 析构调用&ThreadLocalSingleton::destructor
       pthread_key_create(&pkey_, &ThreadLocalSingleton::destructor);
     }
 
     ~Deleter()
     {
+      // 析构
       pthread_key_delete(pkey_);
     }
-    // 需要存储特殊值调用 pthread_setspcific()
+    // 构造函数已经创建了线程私有变量, 这里给其赋值为T* newObj
     void set(T* newObj)
     {
       assert(pthread_getspecific(pkey_) == NULL);
-      /// 设置线程私有变量
+      /// 线程私有变量赋值
       pthread_setspecific(pkey_, newObj);
     }
 
     pthread_key_t pkey_;
   };
 
-  /// 前置__thread说明t_value_是私有变量
+  // T* t_value_ 是线程内部变量, 指向对象
   static __thread T* t_value_;
-  static Deleter deleter_;  
+  static Deleter deleter_;   // 析构对象
 };
 
 template<typename T>

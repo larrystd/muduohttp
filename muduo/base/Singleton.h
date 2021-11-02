@@ -3,8 +3,8 @@
 //
 // Author: Shuo Chen (chenshuo at chenshuo dot com)
 
-#ifndef MUDUO_BASE_SINGLETON_H
-#define MUDUO_BASE_SINGLETON_H
+#ifndef MUDUO_BASE_SINGLETON_H_
+#define MUDUO_BASE_SINGLETON_H_
 
 #include "muduo/base/noncopyable.h"
 
@@ -37,7 +37,7 @@ class Singleton : noncopyable
 
   static T& instance()
   {
-    pthread_once(&ponce_, &Singleton::init);
+    pthread_once(&ponce_, &Singleton::init);  // 这句话保证多线程中 &Singleton::init只会被执行一次(只会被一个线程执行且执行一次), 在哪个线程中执行未可知
     assert(value_ != NULL);
     return *value_;
   }
@@ -45,10 +45,10 @@ class Singleton : noncopyable
  private:
   static void init()
   {
-    value_ = new T();
+    value_ = new T(); // 创建对象
     if (!detail::has_no_destroy<T>::value)
     {
-      ::atexit(destroy);
+      ::atexit(destroy);  // 销毁对象并退出
     }
   }
 
@@ -62,7 +62,7 @@ class Singleton : noncopyable
   }
 
  private:
-  static pthread_once_t ponce_;
+  static pthread_once_t ponce_; // pthread_once_t保证单例模式
   static T*             value_;
 };
 
