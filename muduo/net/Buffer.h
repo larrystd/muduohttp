@@ -70,10 +70,12 @@ class Buffer : public muduo::copyable
   // 可读的字节数
   size_t readableBytes() const
   { return writerIndex_ - readerIndex_; }
-  // 可写的字节数
+  
+  // 返回可写的字节数
   size_t writableBytes() const
   { return buffer_.size() - writerIndex_; }
-  // 前空间字节数
+
+  // 读空间之前的prepend模块字节数
   size_t prependableBytes() const
   { return readerIndex_; }
 

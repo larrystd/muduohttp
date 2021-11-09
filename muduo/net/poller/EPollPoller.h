@@ -1,15 +1,5 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is an internal header file, you should not include this.
-
-#ifndef MUDUO_NET_POLLER_EPOLLPOLLER_H
-#define MUDUO_NET_POLLER_EPOLLPOLLER_H
+#ifndef MUDUO_NET_POLLER_EPOLLPOLLER_H_
+#define MUDUO_NET_POLLER_EPOLLPOLLER_H_
 
 #include "muduo/net/Poller.h"
 
@@ -23,15 +13,15 @@ namespace net
 {
 
 ///
-/// IO Multiplexing with epoll(4).
+/// IO Multiplexing with epoll(4). 使用epoll的IO多路复用
 ///
 class EPollPoller : public Poller
 {
  public:
-  EPollPoller(EventLoop* loop);
+  EPollPoller(EventLoop* loop); // 持有epoll的loop对象
   ~EPollPoller() override;
-  /// 重写方法
-  Timestamp poll(int timeoutMs, ChannelList* activeChannels) override;
+
+  Timestamp poll(int timeoutMs, ChannelList* activeChannels) override;  // 重写poll
   void updateChannel(Channel* channel) override;
   void removeChannel(Channel* channel) override;
 
@@ -42,19 +32,16 @@ class EPollPoller : public Poller
   /// 找到活跃的channel
   void fillActiveChannels(int numEvents,
                           ChannelList* activeChannels) const;
-  // update channel
-  void update(int operation, Channel* channel);
-  /// event 列表, event是一个epoll_event 结构体
-  /// epoll_event储存events和data, 存储一个监听的时间
-  /// events 是 epoll 注册的事件，比如EPOLLIN、EPOLLOUT等等
-  /// data 是一个联合体,用来传递参数
-  typedef std::vector<struct epoll_event> EventList;
-  /// epoll文件描述符
-  int epollfd_;
-  /// events_是一个epoll_event结构体的vector
-  EventList events_;
+  void update(int operation, Channel* channel); // 更新监听的channel, 例如可读可写
+
+  // epoll_event结构体含有events和data, events 是uint32_t指代的 epoll 注册的事件，比如EPOLLIN、EPOLLOUT等等
+  // data 是一个union epoll_data_t,包含epoll的对象, 比如data.fd文件描述符
+  typedef std::vector<struct epoll_event> EventList;  // 持有的epoll_event, 用vector维护
+
+  int epollfd_;   // epoll文件描述符
+  EventList events_;  // 储存持有的events list
 };
 
 }  // namespace net
 }  // namespace muduo
-#endif  // MUDUO_NET_POLLER_EPOLLPOLLER_H
+#endif  // MUDUO_NET_POLLER_EPOLLPOLLER_H_

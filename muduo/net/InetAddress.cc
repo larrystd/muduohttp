@@ -1,11 +1,3 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/net/InetAddress.h"
 
 #include "muduo/base/Logging.h"
@@ -17,8 +9,8 @@
 
 // INADDR_ANY use (type)value casting.
 #pragma GCC diagnostic ignored "-Wold-style-cast"
-static const in_addr_t kInaddrAny = INADDR_ANY;
-static const in_addr_t kInaddrLoopback = INADDR_LOOPBACK;
+static const in_addr_t kInaddrAny = INADDR_ANY; //相当于0.0.0.0的地址
+static const in_addr_t kInaddrLoopback = INADDR_LOOPBACK; // 回环地址127.0.0.1
 #pragma GCC diagnostic error "-Wold-style-cast"
 
 //     /* Structure describing an Internet socket address.  */
@@ -56,6 +48,7 @@ InetAddress::InetAddress(uint16_t portArg, bool loopbackOnly, bool ipv6)
 {
   static_assert(offsetof(InetAddress, addr6_) == 0, "addr6_ offset 0");
   static_assert(offsetof(InetAddress, addr_) == 0, "addr_ offset 0");
+  // 绑定的地址为0.0.0.0或者127.0.0.1， 0.0.0.0可以表示本机上的所有IPV4地址
   if (ipv6)
   {
     memZero(&addr6_, sizeof addr6_);
@@ -69,7 +62,7 @@ InetAddress::InetAddress(uint16_t portArg, bool loopbackOnly, bool ipv6)
     memZero(&addr_, sizeof addr_);
     addr_.sin_family = AF_INET;
     in_addr_t ip = loopbackOnly ? kInaddrLoopback : kInaddrAny;
-    addr_.sin_addr.s_addr = sockets::hostToNetwork32(ip);
+    addr_.sin_addr.s_addr = sockets::hostToNetwork32(ip); // 主机序转为网络序, 显然addr_中的数值都是网络序形式
     addr_.sin_port = sockets::hostToNetwork16(portArg);
   }
 }
@@ -84,6 +77,7 @@ InetAddress::InetAddress(StringArg ip, uint16_t portArg, bool ipv6)
   else
   {
     memZero(&addr_, sizeof addr_);
+    // 将ip, port格式化到addr中
     sockets::fromIpPort(ip.c_str(), portArg, &addr_);
   }
 }
@@ -110,10 +104,10 @@ uint32_t InetAddress::ipv4NetEndian() const
 
 uint16_t InetAddress::port() const
 {
-  return sockets::networkToHost16(portNetEndian());
+  return sockets::networkToHost16(portNetEndian()); // 网络字节转为主机字节, IP地址本身就是32位整数, 4字节; port则为16位整数
 }
 
-static __thread char t_resolveBuffer[64 * 1024];
+static __thread char t_resolveBuffer[64 * 1024];  // 线程内部的变量
 
 bool InetAddress::resolve(StringArg hostname, InetAddress* out)
 {

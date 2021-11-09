@@ -49,7 +49,7 @@ string Timestamp::toFormattedString(bool showMicroseconds) const
 Timestamp Timestamp::now()
 {
   struct timeval tv;
-  /// 获取当前时间, 1970年1月1日到现在的时间, 精确到微秒
+  /// gettimeofday获取当前时间, 1970年1月1日到现在的时间, 精确到微秒
   gettimeofday(&tv, NULL);
   int64_t seconds = tv.tv_sec;
   // 获得一个时间戳

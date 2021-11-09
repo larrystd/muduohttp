@@ -1,20 +1,10 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
+#ifndef MUDUO_NET_INETADDRESS_H_
+#define MUDUO_NET_INETADDRESS_H_
 
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is a public header file, it must only include public header files.
-
-#ifndef MUDUO_NET_INETADDRESS_H
-#define MUDUO_NET_INETADDRESS_H
+#include <netinet/in.h>
 
 #include "muduo/base/copyable.h"
 #include "muduo/base/StringPiece.h"
-
-#include <netinet/in.h>
 
 namespace muduo
 {
@@ -25,23 +15,18 @@ namespace sockets
 const struct sockaddr* sockaddr_cast(const struct sockaddr_in6* addr);
 }
 
-///
-/// Wrapper of sockaddr_in.
-///
 /// This is an POD interface class.
-class InetAddress : public muduo::copyable
+class InetAddress : public muduo::copyable  // InetAddress是一个IP地址类
 {
  public:
   /// Constructs an endpoint with given port number.
   /// Mostly used in TcpServer listening.
   explicit InetAddress(uint16_t port = 0, bool loopbackOnly = false, bool ipv6 = false);
 
-  /// Constructs an endpoint with given ip and port.
-  /// @c ip should be "1.2.3.4"
+  /// Constructs an endpoint with given ip and port. 例如StringArg ip, uint16 ip来构建InetAddress
   InetAddress(StringArg ip, uint16_t port, bool ipv6 = false);
 
-  /// Constructs an endpoint with given struct @c sockaddr_in
-  /// Mostly used when accepting new connections
+  /// Constructs an endpoint with given struct sockaddr_in, 但不能隐式转换
   explicit InetAddress(const struct sockaddr_in& addr)
     : addr_(addr)
   { }
@@ -56,11 +41,12 @@ class InetAddress : public muduo::copyable
   uint16_t port() const;
 
   // default copy/assignment are Okay
-
   const struct sockaddr* getSockAddr() const { return sockets::sockaddr_cast(&addr6_); }
   void setSockAddrInet6(const struct sockaddr_in6& addr6) { addr6_ = addr6; }
 
   uint32_t ipv4NetEndian() const;
+  
+  // port的网络序表示
   uint16_t portNetEndian() const { return addr_.sin_port; }
 
   // resolve hostname to IP address, not changing port or sin_family
@@ -75,6 +61,7 @@ class InetAddress : public muduo::copyable
  private:
   union
   {
+    // ipv6版地址和ipv4版地址, InetAddress类实际维护的是系统addr的结构体
     struct sockaddr_in addr_;
     struct sockaddr_in6 addr6_;
   };
@@ -83,4 +70,4 @@ class InetAddress : public muduo::copyable
 }  // namespace net
 }  // namespace muduo
 
-#endif  // MUDUO_NET_INETADDRESS_H
+#endif  // MUDUO_NET_INETADDRESS_H_

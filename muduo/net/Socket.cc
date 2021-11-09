@@ -1,44 +1,33 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/net/Socket.h"
-
-#include "muduo/base/Logging.h"
-#include "muduo/net/InetAddress.h"
-#include "muduo/net/SocketsOps.h"
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <stdio.h>  // snprintf
 
+#include "muduo/base/Logging.h"
+#include "muduo/net/InetAddress.h"
+#include "muduo/net/SocketsOps.h"
+
 using namespace muduo;
 using namespace muduo::net;
 
+// 注意sockets::是namespace
 Socket::~Socket()
 {
-  sockets::close(sockfd_);
+  sockets::close(sockfd_);  // 调用sockets::close
 }
 
-// ::getsocketopt
 bool Socket::getTcpInfo(struct tcp_info* tcpi) const
 {
   socklen_t len = sizeof(*tcpi);
   memZero(tcpi, len);
-  /// 获取套接字选项设置
-  /// tcpi接收选项结果
-  return ::getsockopt(sockfd_, SOL_TCP, TCP_INFO, tcpi, &len) == 0;
+  return ::getsockopt(sockfd_, SOL_TCP, TCP_INFO, tcpi, &len) == 0; // 直接调用::getsockopt获得tcp相关信息保存在tcpi中
 }
 
-// ::getsocketopt string format, 获取套接字选项用字符串输出
 bool Socket::getTcpInfoString(char* buf, int len) const
 {
   struct tcp_info tcpi;
-  bool ok = getTcpInfo(&tcpi);
+  bool ok = getTcpInfo(&tcpi);  // 将getsockopt获取的tcp信息格式化到buf中
   if (ok)
   {
     snprintf(buf, len, "unrecovered=%u "
@@ -61,20 +50,17 @@ bool Socket::getTcpInfoString(char* buf, int len) const
   return ok;
 }
 
-/// 绑定地址
-void Socket::bindAddress(const InetAddress& addr)
+void Socket::bindAddress(const InetAddress& addr) // 调用sockets::bindOrDie绑定Ip地址
 {
   sockets::bindOrDie(sockfd_, addr.getSockAddr());
 }
 
-/// 监听sockfd_
-void Socket::listen()
+void Socket::listen() // 调用sockets::listenOrDie监听sockfd
 {
   sockets::listenOrDie(sockfd_);
 }
 
-/// 接受, 返回的connfd
-int Socket::accept(InetAddress* peeraddr)
+int Socket::accept(InetAddress* peeraddr) // 调用sockets::accept接受某个连接, 返回fd
 {
   struct sockaddr_in6 addr;
   memZero(&addr, sizeof addr);
@@ -86,8 +72,7 @@ int Socket::accept(InetAddress* peeraddr)
   return connfd;
 }
 
-/// shutdownWrite
-void Socket::shutdownWrite()
+void Socket::shutdownWrite()  // 调用sockets::shutdownWrite关闭连接
 {
   sockets::shutdownWrite(sockfd_);
 }
@@ -104,7 +89,7 @@ void Socket::setReuseAddr(bool on)
 {
   int optval = on ? 1 : 0;
   ::setsockopt(sockfd_, SOL_SOCKET, SO_REUSEADDR,
-               &optval, static_cast<socklen_t>(sizeof optval));
+               &optval, static_cast<socklen_t>(sizeof optval)); // 设置socket选项, SO_REUSEADDR
   // FIXME CHECK
 }
 
@@ -126,12 +111,15 @@ void Socket::setReusePort(bool on)
 #endif
 }
 
-/// 设置SO_KEEPALIVE
 void Socket::setKeepAlive(bool on)
 {
   int optval = on ? 1 : 0;
-  ::setsockopt(sockfd_, SOL_SOCKET, SO_KEEPALIVE,
-               &optval, static_cast<socklen_t>(sizeof optval));
-  // FIXME CHECK
+  int ret = ::setsockopt(sockfd_, SOL_SOCKET, SO_KEEPALIVE,
+               &optval, static_cast<socklen_t>(sizeof optval)); // 设置socket选项, SO_KEEPALIVE
+  if (ret == 0) {
+    LOG_INFO << "set keepalive success";
+  }else {
+    LOG_INFO << "set keepalive failed";
+  }
 }
 

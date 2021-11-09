@@ -1,15 +1,5 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is an internal header file, you should not include this.
-
-#ifndef MUDUO_NET_SOCKET_H
-#define MUDUO_NET_SOCKET_H
+#ifndef MUDUO_NET_SOCKET_H_
+#define MUDUO_NET_SOCKET_H_
 
 #include "muduo/base/noncopyable.h"
 
@@ -26,17 +16,15 @@ namespace net
 
 class InetAddress;
 
-/// 封装一个socket
-/// 核心使socketfd，文件描述符
 /// Wrapper of socket file descriptor.
 ///
 /// It closes the sockfd when desctructs.
 /// It's thread safe, all operations are delagated to OS.
-class Socket : noncopyable
+class Socket : noncopyable  // Socket类
 {
  public:
   explicit Socket(int sockfd)
-    : sockfd_(sockfd)
+    : sockfd_(sockfd) // 传入sockfd构造
   { }
 
   // Socket(Socket&&) // move constructor in C++11
@@ -78,7 +66,7 @@ class Socket : noncopyable
   ///
   /// Enable/disable SO_KEEPALIVE
   ///
-  void setKeepAlive(bool on);
+  void setKeepAlive(bool on); // keep alive, 当客户端端等待超过一定时间后自动给服务端发送一个空的报文，如果对方回复了这个报文证明连接还存活着
 
  private:
   const int sockfd_;
@@ -87,4 +75,4 @@ class Socket : noncopyable
 }  // namespace net
 }  // namespace muduo
 
-#endif  // MUDUO_NET_SOCKET_H
+#endif  // MUDUO_NET_SOCKET_H_

@@ -32,10 +32,11 @@ ssize_t Buffer::readFd(int fd, int* savedErrno)
   struct iovec vec[2];
   const size_t writable = writableBytes();
 
-  /// 设置一些读取指针
+  /// 设置批数据结构, vec维度为2
   vec[0].iov_base = begin()+writerIndex_; /// 可写地址
-  vec[0].iov_len = writable;  /// 可写空间
-  vec[1].iov_base = extrabuf;
+  vec[0].iov_len = writable;  /// 可写空间长度
+
+  vec[1].iov_base = extrabuf; // 额外的缓冲区
   vec[1].iov_len = sizeof extrabuf;
   // when there is enough space in this buffer, don't read into extrabuf.
   // when extrabuf is used, we read 128k-1 bytes at most.

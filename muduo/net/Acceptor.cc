@@ -50,7 +50,7 @@ Acceptor::~Acceptor()
   ::close(idleFd_);
 }
 
-/// 监听客户端socket
+// 服务器socket的listen监听
 void Acceptor::listen()
 {
   loop_->assertInLoopThread();

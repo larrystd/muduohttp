@@ -1,15 +1,5 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is a public header file, it must only include public header files.
-
-#ifndef MUDUO_NET_ENDIAN_H
-#define MUDUO_NET_ENDIAN_H
+#ifndef MUDUO_NET_ENDIAN_H_
+#define MUDUO_NET_ENDIAN_H_
 
 #include <stdint.h>
 #include <endian.h>
@@ -29,9 +19,9 @@ namespace sockets
 
 /// convert the byte encoding of integer values from the byte order that the current CPU (the "host") uses,
 
-/// 低序字节存储在起始地址，这称为小端（little-endian）字节序；另一种方法是将高序字节存储在起始地址，这称为大端（big-endian）字节序
-
 /// 网络字节序采用big endian排序方式。常见主机则是小端字节序
+
+/// 字节序输入输出前后都是uint64_t, htobe64表示64位主机字节序转网络字节, be64toh表示64位网络字节转主机字节
 
 /// 01111111 00000000 00000000 00000001 =   2130706433   （主机字节序）
 

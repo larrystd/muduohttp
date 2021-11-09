@@ -1,19 +1,9 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is an internal header file, you should not include this.
-
-#ifndef MUDUO_NET_POLLER_POLLPOLLER_H
-#define MUDUO_NET_POLLER_POLLPOLLER_H
-
-#include "muduo/net/Poller.h"
+#ifndef MUDUO_NET_POLLER_POLLPOLLER_H_
+#define MUDUO_NET_POLLER_POLLPOLLER_H_
 
 #include <vector>
+
+#include "muduo/net/Poller.h"
 
 struct pollfd;
 
@@ -25,21 +15,17 @@ namespace net
 ///
 /// IO Multiplexing with poll(2).
 ///
-class PollPoller : public Poller
-{
+class PollPoller : public Poller {
  public:
-
   PollPoller(EventLoop* loop);
-  ~PollPoller() override;
+  ~PollPoller() override; // 覆盖继承类的虚函数
 
   Timestamp poll(int timeoutMs, ChannelList* activeChannels) override;
   void updateChannel(Channel* channel) override;
   void removeChannel(Channel* channel) override;
 
  private:
-  void fillActiveChannels(int numEvents,
-                          ChannelList* activeChannels) const;
-
+  void fillActiveChannels(int numEvents, ChannelList* activeChannels) const;
   typedef std::vector<struct pollfd> PollFdList;
   PollFdList pollfds_;
 };
