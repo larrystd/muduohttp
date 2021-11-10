@@ -1,13 +1,10 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
-
 #include "muduo/net/EventLoop.h"
+
+#include <signal.h>
+#include <sys/eventfd.h>
+#include <unistd.h>
+
+#include <algorithm>
 
 #include "muduo/base/Logging.h"
 #include "muduo/base/Mutex.h"
@@ -16,33 +13,21 @@
 #include "muduo/net/SocketsOps.h"
 #include "muduo/net/TimerQueue.h"
 
-#include <algorithm>
-
-#include <signal.h>
-#include <sys/eventfd.h>
-#include <unistd.h>
-
 using namespace muduo;
 using namespace muduo::net;
 
 namespace
 {
+__thread EventLoop* t_loopInThisThread = 0; // 线程局部变量, 本线程的loop对象指针
 
-/// 线程局部变量，event_loop
-__thread EventLoop* t_loopInThisThread = 0;
-
-const int kPollTimeMs = 10000;
-
-/// eventfd
-// 在Linux系统中，eventfd是一个用来通知事件的文件描述符，timerfd是的定时器事件的文件描述符
-/// eventfd用来触发事件通知，timerfd用来触发将来的事件通知。
+const int kPollTimeMs = 10000;  // poll的时间, 毫秒
 
 // eventfd在内核里的核心是一个计数器counter，它是一个uint64_t的整形变量counter，初始值为initval。
 // read操作 如果当前counter > 0，那么read返回counter值，并重置counter为0；如果当前counter等于0，那么read 1)阻塞直到counter大于0
 // write操作 write尝试将value加到counter上。write可以多次连续调用，但read读一次即可清零
 int createEventfd()
 {
-  int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+  int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC); // 创建eventfd
   if (evtfd < 0)
   {
     LOG_SYSERR << "Failed in eventfd";
@@ -58,8 +43,7 @@ class IgnoreSigPipe
  public:
   IgnoreSigPipe()
   {
-    ::signal(SIGPIPE, SIG_IGN);
-    // LOG_TRACE << "Ignore SIGPIPE";
+    ::signal(SIGPIPE, SIG_IGN); // 发送信号SIGPIPE, 处理方式为SIG_IGN
   }
 };
 #pragma GCC diagnostic error "-Wold-style-cast"
@@ -67,8 +51,7 @@ class IgnoreSigPipe
 IgnoreSigPipe initObj;
 }  // namespace
 
-// 当前线程的eventloop
-EventLoop* EventLoop::getEventLoopOfCurrentThread()
+EventLoop* EventLoop::getEventLoopOfCurrentThread() // 得到当前线程的loop指针(线程内部变量)
 {
   return t_loopInThisThread;
 }
@@ -79,176 +62,139 @@ EventLoop::EventLoop()
     eventHandling_(false),
     callingPendingFunctors_(false),
     iteration_(0),
-    /// 构造thread_loop对象的线程id, 一般就是子线程
-    threadId_(CurrentThread::tid()),
-    // 创建一个poller_对象, 一个子线程会有一个eventloop, 一个eventloop会有一个poller_, 
-    poller_(Poller::newDefaultPoller(this)),
-    timerQueue_(new TimerQueue(this)),
-    /// 创建wakeupFd_
-    wakeupFd_(createEventfd()),
-    /// 创建一个wakeChannel, 用来接收wakeup的socket
-    wakeupChannel_(new Channel(this, wakeupFd_)),
-    currentActiveChannel_(NULL)
+    threadId_(CurrentThread::tid()),  // 创建eventloop对象的子线程(eventloop为线程栈对象), eventLoop在子线程的线程池中就已经创建
+    poller_(Poller::newDefaultPoller(this)),  // 用loop*创建pooler, 是pool存在用unique_ptr维护的指针
+    timerQueue_(new TimerQueue(this)),  // 通过loop*创建timerQueue, 赋给timerQueue_指针
+    wakeupFd_(createEventfd()), // 创建wakeupFd_
+    wakeupChannel_(new Channel(this, wakeupFd_)), // 基于loop* 和wakeupFd创建wakeup通道
+    currentActiveChannel_(NULL) // poll之后的活跃通道
 {
   LOG_DEBUG << "EventLoop created " << this << " in thread " << threadId_;
-  /// 当前线程已经有eventloop对象了
-  if (t_loopInThisThread)
+  if (t_loopInThisThread) // 线程中存在loop指针(构造eventloop线程不应该持有loop指针)
   {
     LOG_FATAL << "Another EventLoop " << t_loopInThisThread
               << " exists in this thread " << threadId_;
   }
   else
   {
-    t_loopInThisThread = this;
+    t_loopInThisThread = this;  // 设置线程变量t_loopInThisThread指向本eventloop对象
   }
-  /// wakeChannel如果被唤醒, 调用&EventLoop::handleRead
   wakeupChannel_->setReadCallback(
-      std::bind(&EventLoop::handleRead, this));
-  // 设置wakeupfd可读, 注意在eventloop创建时就设置了, 也就是说这是在子线程内部loop中设置一个wakechannel
-  wakeupChannel_->enableReading();
+      std::bind(&EventLoop::handleRead, this)); // wakeupfd可读的回调函数为&EventLoop::handleRead
+  wakeupChannel_->enableReading();  // 设置wakeupChannel_可读触发, 注册到poll中
 }
 
 EventLoop::~EventLoop()
 {
   LOG_DEBUG << "EventLoop " << this << " of thread " << threadId_
             << " destructs in thread " << CurrentThread::tid();
-  wakeupChannel_->disableAll();
+  wakeupChannel_->disableAll(); // wakeup通道disable和remove
   wakeupChannel_->remove();
-  ::close(wakeupFd_);
-  t_loopInThisThread = NULL;
+  ::close(wakeupFd_); // 关闭wakeupfd
+  t_loopInThisThread = NULL;  // 线程不持有t_loopInThisThread
 }
 
-// EventLoop的loop循环
-/// loop是针对服务器的, 需要处理大量客户端的处理的回调函数。执行loop管理线程需要one thread one loop, 但执行这些回调函数是可以多线程的
-
-/// 会有个线程池执行大量eventloop, 同时这些线程可以执行任务队列的函数
-
-void EventLoop::loop()
+void EventLoop::loop()  // 主要函数, 线程内部线程栈有eventloop对象, 线程一直处于loop循环中。
 {
   assert(!looping_);
-  /// 该线程是创建eventloop的线程(每个子线程都可以)
-  assertInLoopThread();
+  assertInLoopThread(); // 线程内部loop只能由这个线程执行
   looping_ = true;
-  quit_ = false;  // FIXME: what if someone calls quit() before loop() ?
+  quit_ = false;
   LOG_TRACE << "EventLoop " << this << " start looping";
 
-  while (!quit_)
-  /// loop循环未终止
+  while (!quit_)  // 只要quit不为true就循环
   {
 
-    /// 使用poller_->poll获取活跃的fd所属的activeChannels_，调用注册回调函数handleEvent。
-    activeChannels_.clear();
-    /// 一般的会阻塞在poll直到有活跃的channel, 注意这只是影响的channel对象
-    pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_); 
-    ++iteration_;
+    activeChannels_.clear();  // 先清空std::vector<Channel*> ChannelList 活跃channel
+    pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);  // 线程一般会阻塞在poll中, 内部是epoll_wait, 等待触发的事件, 返回的触发事件列表
     /// 打印活跃的channel
-    if (Logger::logLevel() <= Logger::TRACE)
+    if (Logger::logLevel() <= Logger::TRACE)  // 打印活跃的channel
     {
       printActiveChannels();
     }
-    // TODO sort channel by priority
-    // 执行活跃函数的回调函数，注意对每一个子函数
     eventHandling_ = true;
     for (Channel* channel : activeChannels_)
     {
       currentActiveChannel_ = channel;
       /// 处理handleEvent函数
-      currentActiveChannel_->handleEvent(pollReturnTime_); 
+      currentActiveChannel_->handleEvent(pollReturnTime_); // 调用channel的handleEvent函数, 实际上根据poll的事件类型调用channel的回调函数。回调函数包括应用层逻辑
     }
     // 清空ActiveChannel_
     currentActiveChannel_ = NULL;
     eventHandling_ = false;
 
-    /// 执行需要在io线程中执行的函数(防止多线程竞态)
-    /// 注意如果此时该EventLoop中迟迟没有事件触发，那么epoll_wait一直就会阻塞。 这样会导致，pendingFunctors_迟迟不能被执行了。
-    /// 这时候需要唤醒epoll_wait，随机触发一个事件让poller_->poll解除阻塞
-
     /// 待执行的任务队列
-    doPendingFunctors();
+    doPendingFunctors();  // 执行需要该线程执行的任务队列, 包括Tcp连接建立&TcpConnection::connectEstablished, 定时器任务等
   }
 
   LOG_TRACE << "EventLoop " << this << " stop looping";
   looping_ = false;
 }
 
-/// 退出loop循环
-void EventLoop::quit()
+void EventLoop::quit() // 退出loop循环, 这个主线程执行
 {
-  quit_ = true;
-  // 当前的线程不是创建eventloop对象的线程, 需要等待
-  // 创建eventloop对象的线程负责销毁它
+  quit_ = true; // 设置quit_ = true,阻断loop()循环
   if (!isInLoopThread())
   {
-    wakeup();
+    wakeup(); // 这里防止子线程阻塞在epoll_wait, 唤醒之
   }
 }
 
 void EventLoop::runInLoop(Functor cb)
 {
-  /// 创建eventloop的线程中执行cb函数, 保证始终只有一个线程执行该函数, 是创建该eventloop对象的线程
-  /// 
-  if (isInLoopThread())
+  if (isInLoopThread()) // 如果线程是loop所在线程, 执行之
   {
     cb();
   }
   else
-
   {
-    ///任务先入队列，等eventloop线程自动调用之
-    queueInLoop(std::move(cb));
+    queueInLoop(std::move(cb)); // 线程不是loop所在线程, 调用queueInLoop加入到loop线程的loop对象的执行队列中
   }
 }
 
 /// 将任务加入到任务队列中
 void EventLoop::queueInLoop(Functor cb)
 {
-  /// 主线程会调用runInLoop, 进而调用queueInLoop, 但loop对象是子线程的, 因此cb会到子线程的pendingFunctors_中
   {
   MutexLockGuard lock(mutex_);
-  pendingFunctors_.push_back(std::move(cb));
+  pendingFunctors_.push_back(std::move(cb));  // 多个线程可以将任务加入到同一个线程的pendingFunctors_, 因此需要同步
   }
-  // 这里头还是主线程, 会调用wakeup
-  if (!isInLoopThread() || callingPendingFunctors_)
+  // 这里还是主线程, 调用wakeup唤醒子线程(阻塞在epollwait呢)
+  if (!isInLoopThread() || callingPendingFunctors_) // 不是此线程且
   {
-    /// 唤醒eventloop的epoll_wait等待事件触发, 从而让eventloop线程自动执行任务队列pendingFunctors_中的函数
-    wakeup();
+    wakeup(); // 调用wakeup唤醒epoll_wait的子线程
   }
 }
 
-/// 等待io执行的函数大小
 size_t EventLoop::queueSize() const
 {
   MutexLockGuard lock(mutex_);
-  return pendingFunctors_.size();
+  return pendingFunctors_.size(); // 等待队列的大小, 要加锁, 有可能别人在写
 }
 
-/// 定时器, 在time时刻执行TimerCallback
 TimerId EventLoop::runAt(Timestamp time, TimerCallback cb)
 {
-  return timerQueue_->addTimer(std::move(cb), time, 0.0);
+  return timerQueue_->addTimer(std::move(cb), time, 0.0); // 将cb, time, 0.0表示在time时刻执行cb的定时
 }
 
-/// 定时器, 延迟执行TimerCallback
 TimerId EventLoop::runAfter(double delay, TimerCallback cb)
 {
-  Timestamp time(addTime(Timestamp::now(), delay));
-  return runAt(time, std::move(cb));
+  Timestamp time(addTime(Timestamp::now(), delay)); // 设置时间戳未time+delay
+  return runAt(time, std::move(cb));  // 加入定时器
 }
 
-/// 定时器, 每间隔interval执行TimerCallback
 TimerId EventLoop::runEvery(double interval, TimerCallback cb)
 {
   Timestamp time(addTime(Timestamp::now(), interval));
-  return timerQueue_->addTimer(std::move(cb), time, interval);
+  return timerQueue_->addTimer(std::move(cb), time, interval);  // 有间隔的时间戳加入定时器
 }
 
-/// 定时器取消timerId
-void EventLoop::cancel(TimerId timerId)
+void EventLoop::cancel(TimerId timerId) // 根据timerId取消定时任务
 {
   return timerQueue_->cancel(timerId);
 }
-/// 更新此eventloop 监听的channel,基于poller_修改fd, 被channel调用
-void EventLoop::updateChannel(Channel* channel)
+
+void EventLoop::updateChannel(Channel* channel) // 调用poller更新channel->fd的事件监听清空
 {
   assert(channel->ownerLoop() == this);
   assertInLoopThread();
@@ -256,8 +202,7 @@ void EventLoop::updateChannel(Channel* channel)
   poller_->updateChannel(channel);
 }
 
-/// 删除channel, 基于poller_删除注册的fd, 被channel调用
-void EventLoop::removeChannel(Channel* channel)
+void EventLoop::removeChannel(Channel* channel) // 删除channel , 并调用poller删除对应的fd
 {
   assert(channel->ownerLoop() == this);
   assertInLoopThread();
@@ -269,8 +214,8 @@ void EventLoop::removeChannel(Channel* channel)
   poller_->removeChannel(channel);
 }
 
-/// eventloop has_channel, 实际是调用poller_判断监听的channel
-bool EventLoop::hasChannel(Channel* channel)
+
+bool EventLoop::hasChannel(Channel* channel)  // has_channel, 调用poller_判断是否存在监听的channel
 {
   assert(channel->ownerLoop() == this);
   assertInLoopThread();
@@ -285,12 +230,10 @@ void EventLoop::abortNotInLoopThread()
             << ", current thread id = " <<  CurrentThread::tid();
 }
 
-/// 对这个wakeupFd_进行写操作，以触发wakeupFd_的可读事件。解除loop阻塞在epoll_wait。
-/// 直接发送一个socket
-void EventLoop::wakeup()
+void EventLoop::wakeup()  // 发送一个写操作, 以触发wakeupFd_的可读事件。解除loop阻塞在epoll_wait。
 {
   uint64_t one = 1;
-  /// 主线程调用, 但wakeupFd_却是子线程的, 结果就是主线程调sockets::write(wakeupFd_, 被对应子线程的poller接收, 起到了唤醒的作用
+  /// 这里是主线程调用, 但wakeupFd_却是子线程的, 结果就是主线程调sockets::write(wakeupFd_, 被对应子线程的poller接收, 起到了唤醒的作用
   ssize_t n = sockets::write(wakeupFd_, &one, sizeof one);
   if (n != sizeof one)
   {
@@ -298,8 +241,7 @@ void EventLoop::wakeup()
   }
 }
 
-/// 读wakeupFd_
-void EventLoop::handleRead()
+void EventLoop::handleRead()  // 读wakeupFd_回调
 {
   uint64_t one = 1;
   ssize_t n = sockets::read(wakeupFd_, &one, sizeof one);
@@ -309,8 +251,7 @@ void EventLoop::handleRead()
   }
 }
 
-/// 运行等待的函数
-void EventLoop::doPendingFunctors()
+void EventLoop::doPendingFunctors() // 运行等待队列的函数
 {
   /// 新建一个functor
   std::vector<Functor> functors;

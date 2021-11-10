@@ -42,7 +42,7 @@ class EventLoopThread : noncopyable
  private:
   void threadFunc();
 
-  /// 线程内部的loop对象
+  /// 线程指向的loop对象
   EventLoop* loop_ GUARDED_BY(mutex_);
   bool exiting_;
   

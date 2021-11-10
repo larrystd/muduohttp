@@ -84,13 +84,9 @@ void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)
 {
   // 这个loop_是主线程的
   loop_->assertInLoopThread();
-  /// 来了一个连接, 分配一个固定eventloop thread处理之
-  /// 连接绑定eventloop, eventloop绑定thread, 因此连接绑定了thread
-  /// 这样就不会线程静态了, 因为固定的连接由固定的线程处理
-  /// 主线程的作用只是刚开始建立连接，以后的处理通话等由特定的工作线程进行
 
-  /// 返回threadPool_ 线程池loop线程池列表的下一个loop, (每个loop来自不同线程)
-  EventLoop* ioLoop = threadPool_->getNextLoop(); // 返回ioLoop, 这个ioLoop实际的对象在子线程里头, 子线程还阻塞在eventloop里呢
+  /// 这里根本不用处理线程池, 而是直接分配一个ioLoop指针, 就可以让对应的子线程自动处理对象
+  EventLoop* ioLoop = threadPool_->getNextLoop(); // 从线程池中找到一个可用的ioLoop, 这个ioLoop指向的loop对象在子线程里, 子线程还阻塞在eventloop
   char buf[64];
   snprintf(buf, sizeof buf, "-%s#%d", ipPort_.c_str(), nextConnId_);
   ++nextConnId_;
@@ -102,8 +98,7 @@ void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)
   /// 封装IP地址
   InetAddress localAddr(sockets::getLocalAddr(sockfd));
   
-  // TcpConnectionPtr为std::shared_ptr<TcpConnection>, conn可以有多个指针指向, 存储在堆上
-  // 封装成普通conn就行了, ioLoop指向子线程创建的Loop,位于子线程的栈中 
+  // 用ioLoop, sockfd等构造TcpConnection对象, 用shared_ptr维护得到conn
   TcpConnectionPtr conn(new TcpConnection(ioLoop,
                                           connName,
                                           sockfd,
@@ -118,10 +113,7 @@ void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)
   conn->setCloseCallback(
       std::bind(&TcpServer::removeConnection, this, _1)); // FIXME: unsafe
 
-  // 在ioLoop所在的线程(子线程)执行&TcpConnection::connectEstablished, 注意执行到这时还是main, ioLoop却位于子线程内, 
-  // ioLoop->runInLoop会将任务函数放到子线程的pendingFunctors_(主函数执行放到子函数队列中), 再调用wakefd唤醒子线程, 子线程会执行自己pendingFunctors_里头
-  // conn对象存在于堆上, 可以多个共享, 注意创建Connection使其内部创建fd的channel, Connection死亡Channel也跟着
-  ioLoop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn));
+  ioLoop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn)); // 这里主线程通过处理loop(loop指向对象在子线程上), 就可以间接让loop所指loop对象的子线程自动执行任务
 }
 
 void TcpServer::removeConnection(const TcpConnectionPtr& conn)

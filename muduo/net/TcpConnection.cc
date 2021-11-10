@@ -341,9 +341,9 @@ void TcpConnection::connectEstablished()
   setState(kConnected);
   // channel绑定到Connection,实现channel到Connection的调用 shared_from_this是维护Connection堆对象
   channel_->tie(shared_from_this());
-  /// channel_中有指向子线程loop的指针, 调用之用子线程的poller注册监听的fd。从而注册到了子线程身上
+  // channel_中有指向子线程loop的指针, 调用之用子线程的poller注册监听的fd。从而注册到了子线程身上
   channel_->enableReading();
-  /// 连接回调函数
+  // 连接回调函数
   connectionCallback_(shared_from_this());
 }
 

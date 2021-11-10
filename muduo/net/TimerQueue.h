@@ -8,8 +8,8 @@
 //
 // This is an internal header file, you should not include this.
 
-#ifndef MUDUO_NET_TIMERQUEUE_H
-#define MUDUO_NET_TIMERQUEUE_H
+#ifndef MUDUO_NET_TIMERQUEUE_H_
+#define MUDUO_NET_TIMERQUEUE_H_
 
 #include <set>
 #include <vector>
@@ -36,57 +36,38 @@ class TimerId;
 class TimerQueue : noncopyable
 {
  public:
-  explicit TimerQueue(EventLoop* loop);
+  explicit TimerQueue(EventLoop* loop);   // 只能用eventloop指针显示构造
   ~TimerQueue();
 
-  ///
-  /// Schedules the callback to be run at given time,
-  /// repeats if @c interval > 0.0.
-  ///
-  /// Must be thread safe. Usually be called from other threads.
-  /// 增加定时任务
-  TimerId addTimer(TimerCallback cb,
-                   Timestamp when,
-                   double interval);
+  TimerId addTimer(TimerCallback cb, Timestamp when, double interval);  // 将cb, when, interval增加定时任务
 
-  void cancel(TimerId timerId);
+  void cancel(TimerId timerId); // 根据timerId取消定时任务
 
  private:
 
-  // FIXME: use unique_ptr<Timer> instead of raw pointers.
-  // This requires heterogeneous comparison lookup (N3465) from C++14
-  // so that we can find an T* in a set<unique_ptr<T>>.
-  /// 时间戳和Timer对， Timer封装了定时任务和时间
-  /// 不用重载Timer operator<, 因为Timestamp是整型
-  typedef std::pair<Timestamp, Timer*> Entry;
-  /// TimerList 集合
-  /// 使用集合, TimerList自然有序, 这里默认按照Timestamp从小到大排列
-  typedef std::set<Entry> TimerList;
-  /// Timer* -id对, int64_t是一个原子递增类, 可以看作Timer的唯一标志
-  /// 指针也是整数, 直接比较地址
-  typedef std::pair<Timer*, int64_t> ActiveTimer;
-  typedef std::set<ActiveTimer> ActiveTimerSet;
+  typedef std::pair<Timestamp, Timer*> Entry; // Entry是pair<Timestamp, Timer*>, 时间戳和Timer*指针
 
-  void addTimerInLoop(Timer* timer);
+  typedef std::set<Entry> TimerList;  // 用set保存TimerList定时任务列表, set默认定时任务根据时间戳从小到大排列
+
+  typedef std::pair<Timer*, int64_t> ActiveTimer; // 活跃的定时任务, pair<Timer*, int64_t>, Timer指针。可以通过timerId构造
+  typedef std::set<ActiveTimer> ActiveTimerSet; // 活跃定时任务的集合, 根据Timer*地址从小到大排列
+
+  void addTimerInLoop(Timer* timer);  // 将Timer加入到loop
   void cancelInLoop(TimerId timerId);
   // called when timerfd alarms
-  void handleRead();
+  void handleRead();  // timerfd可读的回调函数
   // move out all expired timers
   /// 得到超期的定时事件
-  std::vector<Entry> getExpired(Timestamp now);
+  std::vector<Entry> getExpired(Timestamp now); // 根据时间找到超时的定时事件, 返回列表
   void reset(const std::vector<Entry>& expired, Timestamp now);
 
   /// 插入timer
   bool insert(Timer* timer);
 
-  /// 要执行的loop
-  EventLoop* loop_;
-  /// timefd
-  const int timerfd_;
-  /// 监听timefd的连接
-  Channel timerfdChannel_;
-  // Timer list sorted by expiration
-  TimerList timers_;
+  EventLoop* loop_; // 定时器所在的loop对象
+  const int timerfd_; // 用于定时的timerfd
+  Channel timerfdChannel_;  // 定时的监听通道
+  TimerList timers_;  // 时间戳, 定时任务的列表, 根据时间戳排序
 
   // for cancel()
   ActiveTimerSet activeTimers_;
@@ -96,4 +77,4 @@ class TimerQueue : noncopyable
 
 }  // namespace net
 }  // namespace muduo
-#endif  // MUDUO_NET_TIMERQUEUE_H
+#endif  // MUDUO_NET_TIMERQUEUE_H_

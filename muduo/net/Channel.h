@@ -37,7 +37,7 @@ class Channel : noncopyable
  public:
   // event回调函数类型，包括写回调，关闭回调，错误回调
   typedef std::function<void()> EventCallback;
-  // 读事件回调函数
+  // 读事件回调函数, 形参为时间戳
   typedef std::function<void(Timestamp)> ReadEventCallback;
 
   // 构造函数，传入EventLoop和监听的fd
