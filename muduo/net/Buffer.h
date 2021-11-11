@@ -31,8 +31,8 @@ namespace net
 class Buffer : public muduo::copyable
 {
  public:
-  static const size_t kCheapPrepend = 8;  // kCheapPrepend不为0, 可以方便可能存在的前面插入数据
-  static const size_t kInitialSize = 1024;
+  static const size_t kCheapPrepend = 8;  // kCheapPrepend的大小, 可以方便可能存在的前面插入数据
+  static const size_t kInitialSize = 1024;  // buf的总大小
 
   explicit Buffer(size_t initialSize = kInitialSize)   // 显示初始化, 用初始化的大小来构造Buffer
     : buffer_(kCheapPrepend + initialSize),

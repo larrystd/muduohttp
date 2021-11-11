@@ -40,10 +40,10 @@ void Acceptor::listen()
   listening_ = true;
 
   acceptSocket_.listen(); // 调用监听socket的listen()
-  acceptChannel_.enableReading(); // accept通道将可读事件注册到poll(loop所在的), 可以被poll_wait接收响应
+  acceptChannel_.enableReading(); // accept通道将可读事件注册到poll(loop所在的), 可以被poll_wait接收响应(accept)
 }
 
-// 该函数注册到accept channel的可读回调, 一旦可读说明有连接到来, 随机通过handleRead处理连接
+// 该函数注册到accept channel的可读回调, 一旦可读说明有连接到来, 通过handleRead处理连接
 void Acceptor::handleRead()
 {
   loop_->assertInLoopThread(); // 在loop线程中执行

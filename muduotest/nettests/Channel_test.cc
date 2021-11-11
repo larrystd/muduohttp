@@ -40,11 +40,12 @@ class PeriodicTimer
  public:
   PeriodicTimer(EventLoop* loop, double interval, const TimerCallback& cb)
     : loop_(loop),
-      timerfd_(muduo::net::detail::createTimerfd()),
-      timerfdChannel_(loop, timerfd_),
-      interval_(interval),
-      cb_(cb)
-  {
+      timerfd_(muduo::net::detail::createTimerfd()),  // 定时器fd
+      timerfdChannel_(loop, timerfd_),  // 定时器channel
+      interval_(interval),   // 间隔
+      cb_(cb) // 定时任务
+  { 
+    // 设置定时fd channel的读回调函数
     timerfdChannel_.setReadCallback(
         std::bind(&PeriodicTimer::handleRead, this));
     timerfdChannel_.enableReading();
@@ -56,6 +57,7 @@ class PeriodicTimer
     memZero(&spec, sizeof spec);
     spec.it_interval = toTimeSpec(interval_);
     spec.it_value = spec.it_interval;
+    // 设置定时
     int ret = ::timerfd_settime(timerfd_, 0 /* relative timer */, &spec, NULL);
     if (ret)
     {
@@ -75,6 +77,7 @@ class PeriodicTimer
   {
     loop_->assertInLoopThread();
     muduo::net::detail::readTimerfd(timerfd_, Timestamp::now());
+    // 执行cb
     if (cb_)
       cb_();
   }
@@ -105,8 +108,9 @@ int main(int argc, char* argv[])
   LOG_INFO << "pid = " << getpid() << ", tid = " << CurrentThread::tid()
            << " Try adjusting the wall clock, see what happens.";
   EventLoop loop;
-  PeriodicTimer timer(&loop, 1, std::bind(print, "PeriodicTimer"));
-  timer.start();
-  loop.runEvery(1, std::bind(print, "EventLoop::runEvery"));
+  PeriodicTimer timer(&loop, 1, std::bind(print, "PeriodicTimer")); // 注册定时fd到loop并且可读
+  timer.start();  // 设置timefd 1s中间隔化触发
+
+  loop.runEvery(1, std::bind(print, "EventLoop::runEvery"));  // 使用loop的runEvery来执行定时任务, 这一步和上面的是等价的
   loop.loop();
 }

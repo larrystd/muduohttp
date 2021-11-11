@@ -1,29 +1,32 @@
 #include "muduo/net/Buffer.h"
 
-//#define BOOST_TEST_MODULE BufferTest
 #define BOOST_TEST_MAIN
 #define BOOST_TEST_DYN_LINK
 #include <boost/test/unit_test.hpp>
 
+// boost的单元测试库
+
 using muduo::string;
 using muduo::net::Buffer;
 
+// 测试case1
 BOOST_AUTO_TEST_CASE(testBufferAppendRetrieve)
 {
   Buffer buf;
+  // 单元测试
   BOOST_CHECK_EQUAL(buf.readableBytes(), 0);
   BOOST_CHECK_EQUAL(buf.writableBytes(), Buffer::kInitialSize);
   BOOST_CHECK_EQUAL(buf.prependableBytes(), Buffer::kCheapPrepend);
 
-  const string str(200, 'x');
-  buf.append(str);
-  BOOST_CHECK_EQUAL(buf.readableBytes(), str.size());
-  BOOST_CHECK_EQUAL(buf.writableBytes(), Buffer::kInitialSize - str.size());
+  const string str(200, 'x'); // 包含200个x的string
+  buf.append(str);  // 放入buf
+  BOOST_CHECK_EQUAL(buf.readableBytes(), str.size()); // 可读大小正好为str.size()
+  BOOST_CHECK_EQUAL(buf.writableBytes(), Buffer::kInitialSize - str.size());  // 可写的大小
   BOOST_CHECK_EQUAL(buf.prependableBytes(), Buffer::kCheapPrepend);
 
-  const string str2 =  buf.retrieveAsString(50);
+  const string str2 =  buf.retrieveAsString(50);  // 从buf中读取50个字符
   BOOST_CHECK_EQUAL(str2.size(), 50);
-  BOOST_CHECK_EQUAL(buf.readableBytes(), str.size() - str2.size());
+  BOOST_CHECK_EQUAL(buf.readableBytes(), str.size() - str2.size()); // 可读字节大小变成了200-50
   BOOST_CHECK_EQUAL(buf.writableBytes(), Buffer::kInitialSize - str.size());
   BOOST_CHECK_EQUAL(buf.prependableBytes(), Buffer::kCheapPrepend + str2.size());
   BOOST_CHECK_EQUAL(str2, string(50, 'x'));
@@ -41,6 +44,7 @@ BOOST_AUTO_TEST_CASE(testBufferAppendRetrieve)
   BOOST_CHECK_EQUAL(str3, string(350, 'x'));
 }
 
+// 测试case2
 BOOST_AUTO_TEST_CASE(testBufferGrow)
 {
   Buffer buf;
@@ -163,8 +167,8 @@ void output(Buffer&& buf, const void* inner)
 BOOST_AUTO_TEST_CASE(testMove)
 {
   Buffer buf;
-  buf.append("muduo", 5);
-  const void* inner = buf.peek();
+  buf.append("muduo", 5); // 添加字符到缓冲区
+  const void* inner = buf.peek(); // 可读索引
   // printf("Buffer at %p, inner %p\n", &buf, inner);
-  output(std::move(buf), inner);
+  output(std::move(buf), inner);  // 调用out
 }
