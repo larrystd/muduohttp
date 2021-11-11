@@ -160,7 +160,7 @@ void EventLoop::queueInLoop(Functor cb)
   pendingFunctors_.push_back(std::move(cb));  // 多个线程可以将任务加入到同一个线程的pendingFunctors_, 因此需要同步
   }
   // 这里还是主线程, 调用wakeup唤醒子线程(阻塞在epollwait呢)
-  if (!isInLoopThread() || callingPendingFunctors_) // 不是此线程且
+  if (!isInLoopThread() || callingPendingFunctors_) // 执行的不是loop所属线程线程或者, loop线程在执行pendingFunctors(没有阻塞)
   {
     wakeup(); // 调用wakeup唤醒epoll_wait的子线程
   }

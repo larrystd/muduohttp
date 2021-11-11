@@ -1,11 +1,3 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/net/TcpServer.h"
 
 #include "muduo/base/Logging.h"
@@ -23,24 +15,18 @@ TcpServer::TcpServer(EventLoop* loop,
                      const InetAddress& listenAddr,
                      const string& nameArg,
                      Option option)
-  : loop_(loop),
+  : loop_(loop),  // tcpserver的主loop
     ipPort_(listenAddr.toIpPort()),
     name_(nameArg),
-    /// 初始化acceptor监听连接,(调用listen(才开始监听)
-    acceptor_(new Acceptor(loop, listenAddr, option == kReusePort)),
-    /// 初始化threadPool
-    threadPool_(new EventLoopThreadPool(loop, name_)),
-
+    acceptor_(new Acceptor(loop, listenAddr, option == kReusePort)), // 初始化acceptor监听socket,(调用listen(才开始监听)
+    threadPool_(new EventLoopThreadPool(loop, name_)),     // 构造threadPool对象
     /// 初始化connection回调函数和message回调函数
     connectionCallback_(defaultConnectionCallback),
     messageCallback_(defaultMessageCallback),
     nextConnId_(1)
 {
-  /// 设置acceptor对象的NewConnectionCallback为&TcpServer::newConnection
-
-  /// 新连接一旦到达, 自动回调TcpServer::newConnection封装为connection
   acceptor_->setNewConnectionCallback(
-      std::bind(&TcpServer::newConnection, this, _1, _2));
+      std::bind(&TcpServer::newConnection, this, _1, _2)); // 新连接一旦到达, 自动回调TcpServer::newConnection封装为connection
 }
 
 TcpServer::~TcpServer()
@@ -48,7 +34,7 @@ TcpServer::~TcpServer()
   loop_->assertInLoopThread();
   LOG_TRACE << "TcpServer::~TcpServer [" << name_ << "] destructing";
 
-  for (auto& item : connections_)
+  for (auto& item : connections_) // 每一个TcpConnection, 一个server可用有多个tcpConnection
   {
     TcpConnectionPtr conn(item.second);
     item.second.reset();
@@ -63,78 +49,63 @@ void TcpServer::setThreadNum(int numThreads)
   threadPool_->setThreadNum(numThreads);
 }
 
-void TcpServer::start()
+void TcpServer::start() // server创建线程池loop, 运行监听
 {
   if (started_.getAndSet(1) == 0)
-  {
-    /// 线程池启动, 结果是创建若干线程执行loop, 这些线程都阻塞到里poll中。此外这些线程在自己内部创建loop对象
-    threadPool_->start(threadInitCallback_);
-
+  { 
+    threadPool_->start(threadInitCallback_); // 线程池启动, 结果是创建若干线程, 每个线程创建loop对象, 子线程执行loop()阻塞到里poll中
     assert(!acceptor_->listening());
-
-    /// 在eventloop进程(即主线程)中运行listen监听
-    /// 新连接到来会调用&TcpServer::newConnection
     loop_->runInLoop(
-        std::bind(&Acceptor::listen, get_pointer(acceptor_)));
+        std::bind(&Acceptor::listen, get_pointer(acceptor_)));  // 主线程运行&Acceptor::listen监听, 新连接到来会调用&TcpServer::newConnection创建TcpConnection对象
   }
 }
 
-/// 一旦新连接到达，调用之
-void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)
+void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)  // 新连接到来会调用该函数, 基于sockfd
 {
-  // 这个loop_是主线程的
-  loop_->assertInLoopThread();
-
-  /// 这里根本不用处理线程池, 而是直接分配一个ioLoop指针, 就可以让对应的子线程自动处理对象
-  EventLoop* ioLoop = threadPool_->getNextLoop(); // 从线程池中找到一个可用的ioLoop, 这个ioLoop指向的loop对象在子线程里, 子线程还阻塞在eventloop
+  loop_->assertInLoopThread();   // 这个loop_是主线程的, 主线程执行
+  // 这里根本不用处理线程池, 而是直接分配一个ioLoop指针, 就可以让对应的子线程自动处理对象
+  EventLoop* ioLoop = threadPool_->getNextLoop(); // 从线程池中找到一个可用的ioLoop, 这个ioLoop指向的loop对象在子线程里, 子线程还阻塞在eventloop的epoll_wait
   char buf[64];
-  snprintf(buf, sizeof buf, "-%s#%d", ipPort_.c_str(), nextConnId_);
+  snprintf(buf, sizeof buf, "-%s#%d", ipPort_.c_str(), nextConnId_);  
   ++nextConnId_;
-  string connName = name_ + buf;
+  string connName = name_ + buf;  // 创建connName
 
   LOG_INFO << "TcpServer::newConnection [" << name_
            << "] - new connection [" << connName
            << "] from " << peerAddr.toIpPort();
-  /// 封装IP地址
-  InetAddress localAddr(sockets::getLocalAddr(sockfd));
-  
-  // 用ioLoop, sockfd等构造TcpConnection对象, 用shared_ptr维护得到conn
+  InetAddress localAddr(sockets::getLocalAddr(sockfd));   // 封装IP地址
+
   TcpConnectionPtr conn(new TcpConnection(ioLoop,
                                           connName,
                                           sockfd,
                                           localAddr,
-                                          peerAddr));
+                                          peerAddr)); // 来了一个连接就创建一个TcpConnection,用子线程的loop指针, 该对象用shared_ptr维护
   
-  /// connections_是一个std::map<string, TcpConnectionPtr> ConnectionMap;
-  connections_[connName] = conn;
-  conn->setConnectionCallback(connectionCallback_);
+  connections_[connName] = conn;  // coonection name->conn的map
+  conn->setConnectionCallback(connectionCallback_); // 设置tcpconnection的连接回调函数, 来自用户自定义。以下同样
   conn->setMessageCallback(messageCallback_);
   conn->setWriteCompleteCallback(writeCompleteCallback_);
   conn->setCloseCallback(
-      std::bind(&TcpServer::removeConnection, this, _1)); // FIXME: unsafe
+      std::bind(&TcpServer::removeConnection, this, _1));
 
-  ioLoop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn)); // 这里主线程通过处理loop(loop指向对象在子线程上), 就可以间接让loop所指loop对象的子线程自动执行任务
+  ioLoop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn)); // 主线程将&TcpConnection::connectEstablished加入到子线程的loop对象的任务队列中, 使子线程自动执行任务
 }
 
 void TcpServer::removeConnection(const TcpConnectionPtr& conn)
 {
-  // FIXME: unsafe
-  loop_->runInLoop(std::bind(&TcpServer::removeConnectionInLoop, this, conn));
+  loop_->runInLoop(std::bind(&TcpServer::removeConnectionInLoop, this, conn));  // tcpserver移除该连接
 }
 
 void TcpServer::removeConnectionInLoop(const TcpConnectionPtr& conn)
 {
   loop_->assertInLoopThread();
   LOG_INFO << "TcpServer::removeConnectionInLoop [" << name_
-           << "] - connection " << conn->name();
-  /// 从TcpServer连接map中删除
-  size_t n = connections_.erase(conn->name());
+           << "] - connection " << conn->name();  
+  size_t n = connections_.erase(conn->name());  // tcpconnection从tcpserver的连接map中擦除
   (void)n;
   assert(n == 1);
-  /// 得到ioLoop
-  EventLoop* ioLoop = conn->getLoop();
-  /// 执行TcpConnectio的connectDestroyed
+  EventLoop* ioLoop = conn->getLoop();  // tcpconnection所属的loop
   ioLoop->queueInLoop(
-      std::bind(&TcpConnection::connectDestroyed, conn));
+      std::bind(&TcpConnection::connectDestroyed, conn)); // 在loop所属的线程中执行&TcpConnection::connectDestroyed关闭tcpconnection
 }
 

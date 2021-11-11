@@ -1,11 +1,3 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/net/EventLoopThreadPool.h"
 
 #include "muduo/net/EventLoop.h"
@@ -16,9 +8,8 @@
 using namespace muduo;
 using namespace muduo::net;
 
-EventLoopThreadPool::EventLoopThreadPool(EventLoop* baseLoop, const string& nameArg)
+EventLoopThreadPool::EventLoopThreadPool(EventLoop* baseLoop, const string& nameArg)  // 用baseloop(主线程的loop)构建eventloopthreadpool对象
   : baseLoop_(baseLoop),
-  /// 线程名
     name_(nameArg),
     started_(false),
     numThreads_(0),
@@ -31,55 +22,42 @@ EventLoopThreadPool::~EventLoopThreadPool()
   // Don't delete loop, it's stack variable
 }
 
-/// 开启线程池
-void EventLoopThreadPool::start(const ThreadInitCallback& cb)
+void EventLoopThreadPool::start(const ThreadInitCallback& cb) // 线程池的start, 传入线程创建好的回调函数
 {
   assert(!started_);
-  /// 当前loop创建线程, 也就是主线程
-  baseLoop_->assertInLoopThread();
-  // 开启线程池
+  baseLoop_->assertInLoopThread();  // 执行的线程必须是baseLoop所在线程, 也就是main线程
   started_ = true;
-  // 创建threads和loops
-  for (int i = 0; i < numThreads_; ++i)
+  for (int i = 0; i < numThreads_; ++i) // 依次创建线程
   {
-    /// buf, 储存线程名
-    char buf[name_.size() + 32];
-    snprintf(buf, sizeof buf, "%s%d", name_.c_str(), i);
 
-    // 构造EventLoopThread对象, 初始化thread对象执行函数。这里还没有设置loop*, 线程还未执行
-    EventLoopThread* t = new EventLoopThread(cb, buf);
-    /// t加入threads 线程池列表, 注意t对象在堆上
-    threads_.push_back(std::unique_ptr<EventLoopThread>(t));
-    /// 新线程t执行startLoop()函数,子线程创建loop对象并执行这个loop(), 主线程得到子线程的loop对象指针, 
-    // 线程指针加入loops_。loops是一个std::vector<EventLoop*>, 子线程正阻塞在loop中。
-    // 这里不知不觉的主线程创建的EventLoopThread对象交由了子线程
-    loops_.push_back(t->startLoop()); // t执行startLoop(), 
+    char buf[name_.size() + 32];
+    snprintf(buf, sizeof buf, "%s%d", name_.c_str(), i);  // 线程名储存到buf中
+    EventLoopThread* t = new EventLoopThread(cb, buf);  // 创建一个EventLoopThread
+    threads_.push_back(std::unique_ptr<EventLoopThread>(t));  // 线程指针t用unique_ptr维护, 加入的线程列表中
+    loops_.push_back(t->startLoop()); // t->startLoop()返回的loop_指针加入到执行loop列表中
   }
-  /// 不创建新线程， 当前线程执行cb
-  if (numThreads_ == 0 && cb)
+  if (numThreads_ == 0 && cb) // 执行线程池创建好的回调函数cb
   {
     cb(baseLoop_);
   }
 }
 
-/// loop 是一个vector, 得到下一个loop(每个子线程一个loop对象, 下一个loop每个loop都来自不同的线程)
-EventLoop* EventLoopThreadPool::getNextLoop()
+EventLoop* EventLoopThreadPool::getNextLoop() // 返回下一个loop指针(可用的指针), 给tcpserver和client
 {
   baseLoop_->assertInLoopThread();
   assert(started_);
   EventLoop* loop = baseLoop_;
 
-  if (!loops_.empty())
+  if (!loops_.empty())  // 如果loop不为空
   {
-    // round-robin
     loop = loops_[next_];
     ++next_;
     if (implicit_cast<size_t>(next_) >= loops_.size())
     {
-      next_ = 0;
+      next_ = 0;  // 重置next_
     }
   }
-  return loop;
+  return loop;  // loop对象指针
 }
 
 EventLoop* EventLoopThreadPool::getLoopForHash(size_t hashCode)
@@ -94,7 +72,7 @@ EventLoop* EventLoopThreadPool::getLoopForHash(size_t hashCode)
   return loop;
 }
 
-std::vector<EventLoop*> EventLoopThreadPool::getAllLoops()
+std::vector<EventLoop*> EventLoopThreadPool::getAllLoops()  // 所有的loops返回为vector列表
 {
   baseLoop_->assertInLoopThread();
   assert(started_);

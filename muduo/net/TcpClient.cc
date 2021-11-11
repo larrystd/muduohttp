@@ -1,12 +1,3 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-
 #include "muduo/net/TcpClient.h"
 
 #include "muduo/base/Logging.h"
@@ -18,17 +9,6 @@
 
 using namespace muduo;
 using namespace muduo::net;
-
-// TcpClient::TcpClient(EventLoop* loop)
-//   : loop_(loop)
-// {
-// }
-
-// TcpClient::TcpClient(EventLoop* loop, const string& host, uint16_t port)
-//   : loop_(CHECK_NOTNULL(loop)),
-//     serverAddr_(host, port)
-// {
-// }
 
 namespace muduo
 {
@@ -53,20 +33,18 @@ void removeConnector(const ConnectorPtr& connector)
 
 TcpClient::TcpClient(EventLoop* loop,
                      const InetAddress& serverAddr,
-                     const string& nameArg)
+                     const string& nameArg)   // 通过loop, serverAddr, name构造TcpClient
   : loop_(loop),
-
-    connector_(new Connector(loop, serverAddr)),
+    connector_(new Connector(loop, serverAddr)),  // 创建connector对象返回指针
     name_(nameArg),
     connectionCallback_(defaultConnectionCallback),
-    messageCallback_(defaultMessageCallback),
+    messageCallback_(defaultMessageCallback), // 信息回调函数
     retry_(false),
     connect_(true),
     nextConnId_(1)
 {
-  /// 注册connector_连接后回调函数
   connector_->setNewConnectionCallback(
-      std::bind(&TcpClient::newConnection, this, _1));
+      std::bind(&TcpClient::newConnection, this, _1));  // 注册连接回调函数
   // FIXME setConnectFailedCallback
   LOG_INFO << "TcpClient::TcpClient[" << name_
            << "] - connector " << get_pointer(connector_);
@@ -98,23 +76,19 @@ TcpClient::~TcpClient()
   else
   {
     connector_->stop();
-    // FIXME: HACK
     loop_->runAfter(1, std::bind(&detail::removeConnector, connector_));
   }
 }
 
-/// 连接, 调用connector_
 void TcpClient::connect()
 {
-  // FIXME: check state
   LOG_INFO << "TcpClient::connect[" << name_ << "] - connecting to "
            << connector_->serverAddress().toIpPort();
-  /// 连接
   connect_ = true;
-  connector_->start();
+  connector_->start();  // 调用connector_执行connect服务端
 }
 
-void TcpClient::disconnect()
+void TcpClient::disconnect()  // 断开连接
 {
   connect_ = false;
 
@@ -133,8 +107,7 @@ void TcpClient::stop()
   connector_->stop();
 }
 
-/// 封装连接
-void TcpClient::newConnection(int sockfd)
+void TcpClient::newConnection(int sockfd) // 连接成功之后调用的回调函数
 {
   loop_->assertInLoopThread();
   InetAddress peerAddr(sockets::getPeerAddr(sockfd));

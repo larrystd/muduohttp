@@ -1,29 +1,19 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
+#include "muduo/net/Channel.h"
 
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
+#include <sstream> 
+#include <poll.h>
 
 #include "muduo/base/Logging.h"
-#include "muduo/net/Channel.h"
 #include "muduo/net/EventLoop.h"
-
-#include <sstream>
-
-#include <poll.h>
 
 using namespace muduo;
 using namespace muduo::net;
 
 const int Channel::kNoneEvent = 0;
-const int Channel::kReadEvent = POLLIN | POLLPRI; // 01 | 10 = 11
+const int Channel::kReadEvent = POLLIN | POLLPRI; // 001 | 010 = 011, POLLPRI 急切地读
 const int Channel::kWriteEvent = POLLOUT; // 100
 
-// channel中的loop是每个子线程的loop对象的指针
-// fd是连接, 每个连接都会有一个channel
-Channel::Channel(EventLoop* loop, int fd__)
+Channel::Channel(EventLoop* loop, int fd__) // 构造函数, 构造所属loop_指针, fd
   : loop_(loop),
     fd_(fd__),
     events_(0),
@@ -46,86 +36,76 @@ Channel::~Channel()
   }
 }
 
-/// 会被TcpConnection调用, 表示绑定了TcpConnection(shared_from_this)
-void Channel::tie(const std::shared_ptr<void>& obj)
+void Channel::tie(const std::shared_ptr<void>& obj) // Channel地weak_ptr绑定TcpConnection
 {
   tie_ = obj;
   tied_ = true;
 }
 
-/// 向poll更新event(即channel)
-void Channel::update()
+void Channel::update() // 向poll更新event(即channel)
 {
   addedToLoop_ = true;
-  loop_->updateChannel(this);
+  loop_->updateChannel(this); // 实际调用poll
 }
 
-/// 向poll关闭某个event
-void Channel::remove()
+void Channel::remove() // 向poll删除channel对应地fd
 {
   assert(isNoneEvent());
   addedToLoop_ = false;
   loop_->removeChannel(this);
 }
 
-
-void Channel::handleEvent(Timestamp receiveTime)
+void Channel::handleEvent(Timestamp receiveTime)  // 当poll有活跃channel会调用这个函数
 {
   std::shared_ptr<void> guard;
   if (tied_)
   {
-    // 绑定了TcpConnection,是通过shared_from_this的, 这要看对象是否存活
-    // 如果对象存活，lock()函数返回一个指向共享对象的shared_ptr，否则返回一个空shared_ptr。
-    guard = tie_.lock();
+    guard = tie_.lock();  // 绑定地TcpConnection是否存活
     if (guard)
     {
       handleEventWithGuard(receiveTime);
     }
   }
   else
-  // 例如wakechannel就没有tie_,
+  // tie_还为false, 一般这里是执行tcpConnection的构造
   {
     handleEventWithGuard(receiveTime);
   }
 }
 
-// 根据poll 发来的revents_, 执行各种回调函数
-// 回调函数类型, closeCallback_, errorCallback_, readCallback_, writeCallback_
-void Channel::handleEventWithGuard(Timestamp receiveTime)
+void Channel::handleEventWithGuard(Timestamp receiveTime) // channel活跃之后最终执行这个函数
 {
   eventHandling_ = true;
-  LOG_TRACE << reventsToString();
-  if ((revents_ & POLLHUP) && !(revents_ & POLLIN))
+  LOG_TRACE << reventsToString(); // 根据活跃channel的事件类型等选择调用函数
+  if ((revents_ & POLLHUP) && !(revents_ & POLLIN)) // 关闭连接的回调函数
   {
     if (logHup_)
     {
       LOG_WARN << "fd = " << fd_ << " Channel::handle_event() POLLHUP";
     }
-    if (closeCallback_) closeCallback_();
+    if (closeCallback_) closeCallback_(); // 关闭连接
   }
 
   if (revents_ & POLLNVAL)
   {
     LOG_WARN << "fd = " << fd_ << " Channel::handle_event() POLLNVAL";
   }
-
-  if (revents_ & (POLLERR | POLLNVAL))
+  if (revents_ & (POLLERR | POLLNVAL))  // 错误回调
   {
     if (errorCallback_) errorCallback_();
   }
-  if (revents_ & (POLLIN | POLLPRI | POLLRDHUP))
+  if (revents_ & (POLLIN | POLLPRI | POLLRDHUP))  // 可读回调
   {
     if (readCallback_) readCallback_(receiveTime);
   }
-  if (revents_ & POLLOUT)
+  if (revents_ & POLLOUT) // 可写回调
   {
     if (writeCallback_) writeCallback_();
   }
   eventHandling_ = false;
 }
 
-// tostrings()
-string Channel::reventsToString() const
+string Channel::reventsToString() const // tostrings()
 {
   return eventsToString(fd_, revents_);
 }
@@ -135,7 +115,7 @@ string Channel::eventsToString() const
   return eventsToString(fd_, events_);
 }
 
-string Channel::eventsToString(int fd, int ev)
+string Channel::eventsToString(int fd, int ev)  // 将fd和event内容格式化到string中
 {
   std::ostringstream oss;
   oss << fd << ": ";
@@ -154,5 +134,5 @@ string Channel::eventsToString(int fd, int ev)
   if (ev & POLLNVAL)
     oss << "NVAL ";
 
-  return oss.str();
+  return oss.str(); // 返回格式化的string
 }

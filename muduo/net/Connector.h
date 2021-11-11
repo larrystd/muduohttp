@@ -1,46 +1,29 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is an internal header file, you should not include this.
-
-/// 关键作用, 作为客户端使用的Connector, 发起连接
-/// 判断连接是否成功，如果socket只可写，说明连接成功
-/// 根据连接是否成功，执行回调函数或重试等操作
-
-#ifndef MUDUO_NET_CONNECTOR_H
-#define MUDUO_NET_CONNECTOR_H
-
-#include "muduo/base/noncopyable.h"
-#include "muduo/net/InetAddress.h"
+#ifndef MUDUO_NET_CONNECTOR_H_
+#define MUDUO_NET_CONNECTOR_H_
 
 #include <functional>
 #include <memory>
+
+#include "muduo/base/noncopyable.h"
+#include "muduo/net/InetAddress.h"
 
 namespace muduo
 {
 namespace net
 {
-
 class Channel;
 class EventLoop;
-/// NewConnectionCallback: 执行连接后的回调函数
 
 class Connector : noncopyable,
-                  public std::enable_shared_from_this<Connector>
+                  public std::enable_shared_from_this<Connector>  // 这里继承std::enable_shared_from_this<T>, 下面可以调用shared_from
 {
  public:
- /// 新连接的回调函数
-  typedef std::function<void (int sockfd)> NewConnectionCallback;
+  typedef std::function<void (int sockfd)> NewConnectionCallback; // 新连接回调函数
 
   Connector(EventLoop* loop, const InetAddress& serverAddr);
   ~Connector();
-  // 设置连接回调函数
-  void setNewConnectionCallback(const NewConnectionCallback& cb)
+
+  void setNewConnectionCallback(const NewConnectionCallback& cb)   // 设置连接回调函数
   { newConnectionCallback_ = cb; }
 
   void start();  // can be called in any thread
@@ -66,12 +49,11 @@ class Connector : noncopyable,
   int removeAndResetChannel();
   void resetChannel();
 
-  /// 主线程的loop, 用来处理建立的连接
-  EventLoop* loop_;
-  InetAddress serverAddr_;
+  EventLoop* loop_;   // 所属的loop, 用来处理建立的连接(client用eventloop有点大材小用)
+  InetAddress serverAddr_;  // IP地址和断开
   bool connect_; // atomic
-  States state_;  // FIXME: use atomic variable
-  std::unique_ptr<Channel> channel_;
+  States state_;  // 枚举变量
+  std::unique_ptr<Channel> channel_;  // 用unique_ptr维护一个Channel
   
   NewConnectionCallback newConnectionCallback_;
   int retryDelayMs_;
@@ -80,4 +62,4 @@ class Connector : noncopyable,
 }  // namespace net
 }  // namespace muduo
 
-#endif  // MUDUO_NET_CONNECTOR_H
+#endif  // MUDUO_NET_CONNECTOR_H_

@@ -1,12 +1,3 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-
 #include "muduo/net/Buffer.h"
 
 #include "muduo/net/SocketsOps.h"
@@ -22,10 +13,7 @@ const char Buffer::kCRLF[] = "\r\n";
 const size_t Buffer::kCheapPrepend;
 const size_t Buffer::kInitialSize;
 
-
-/// 读取fd的数据到Buff中
-/// 注意这里是client写inputbuffer, inputbuffer client写, outbuffer ser
-ssize_t Buffer::readFd(int fd, int* savedErrno)
+ssize_t Buffer::readFd(int fd, int* savedErrno) // 从fd的文件描述符写数据到buffer中(inputbuffer)
 {
   // saved an ioctl()/FIONREAD call to tell how much to read
   char extrabuf[65536];
@@ -38,28 +26,22 @@ ssize_t Buffer::readFd(int fd, int* savedErrno)
 
   vec[1].iov_base = extrabuf; // 额外的缓冲区
   vec[1].iov_len = sizeof extrabuf;
-  // when there is enough space in this buffer, don't read into extrabuf.
-  // when extrabuf is used, we read 128k-1 bytes at most.
   const int iovcnt = (writable < sizeof extrabuf) ? 2 : 1;
-  const ssize_t n = sockets::readv(fd, vec, iovcnt);
+  const ssize_t n = sockets::readv(fd, vec, iovcnt);  // 批数据处理
 
-  if (n < 0)
+  if (n < 0)  
   {
-    *savedErrno = errno;
+    *savedErrno = errno;  // 错误消息
   }
   else if (implicit_cast<size_t>(n) <= writable)
   {
-    writerIndex_ += n;
+    writerIndex_ += n;  // 更新可写的索引位置
   }
   else
   {
-    writerIndex_ = buffer_.size();
+    writerIndex_ = buffer_.size();  // buffer空间不够, 先设置writerIndex再append扩大空间
     append(extrabuf, n - writable);
   }
-  // if (n == writable + sizeof extrabuf)
-  // {
-  //   goto line_30;
-  // }
   return n;
 }
 

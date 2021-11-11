@@ -17,7 +17,7 @@ namespace sockets
 #pragma GCC diagnostic ignored "-Wconversion"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 
-/// convert the byte encoding of integer values from the byte order that the current CPU (the "host") uses,
+/// 处理网络字节序和主机字节序convert the byte encoding of integer values from the byte order that the current CPU (the "host") uses,
 
 /// 网络字节序采用big endian排序方式。常见主机则是小端字节序
 

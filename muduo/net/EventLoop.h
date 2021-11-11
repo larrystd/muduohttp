@@ -45,22 +45,15 @@ class EventLoop : noncopyable
   EventLoop();
   ~EventLoop();  // force out-line dtor, for std::unique_ptr members.
 
-  ///
   /// Loops forever.
   ///
   /// Must be called in the same thread as creation of the object.
-  ///
   void loop();
-
-  /// Quits loop.
-  ///
   /// This is not 100% thread safe, if you call through a raw pointer,
   /// better to call through shared_ptr<EventLoop> for 100% safety.
   void quit();
 
-  ///
   /// Time when poll returns, usually means data arrival.
-  ///
   Timestamp pollReturnTime() const { return pollReturnTime_; }
 
   int64_t iteration() const { return iteration_; }
@@ -78,27 +71,18 @@ class EventLoop : noncopyable
   size_t queueSize() const;
 
   // timers, 设置定时器任务
-
-  ///
   /// Runs callback at 'time'.
   /// Safe to call from other threads.
-  ///
   TimerId runAt(Timestamp time, TimerCallback cb);
-  ///
   /// Runs callback after @c delay seconds.
   /// Safe to call from other threads.
-  ///
   TimerId runAfter(double delay, TimerCallback cb);
-  ///
   /// Runs callback every @c interval seconds.
   /// Safe to call from other threads.
-  ///
   TimerId runEvery(double interval, TimerCallback cb);
-  ///
   /// Cancels the timer.
   /// Safe to call from other threads.
-  ///
-  void cancel(TimerId timerId);
+  void cancel(TimerId timerId); // 取消定时器
 
   // internal usage
   /// 更新channel，就是更新需要poll的连接，因此调用poller内部函数实现

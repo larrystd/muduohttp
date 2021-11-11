@@ -1,15 +1,5 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is an internal header file, you should not include this.
-
-#ifndef MUDUO_NET_EVENTLOOPTHREADPOOL_H
-#define MUDUO_NET_EVENTLOOPTHREADPOOL_H
+#ifndef MUDUO_NET_EVENTLOOPTHREADPOOL_H_
+#define MUDUO_NET_EVENTLOOPTHREADPOOL_H_
 
 #include "muduo/base/noncopyable.h"
 #include "muduo/base/Types.h"
@@ -18,7 +8,6 @@
 #include <memory>
 #include <vector>
 
-// 线程池对象， 维护一个thread 列表和eventloop* 对象列表
 namespace muduo
 {
 
@@ -26,27 +15,24 @@ namespace net
 {
 
 class EventLoop;
-class EventLoopThread;
+class EventLoopThread;  
 
 class EventLoopThreadPool : noncopyable
 {
  public:
- /// 线程初始化回调函数
-  typedef std::function<void(EventLoop*)> ThreadInitCallback;
+  typedef std::function<void(EventLoop*)> ThreadInitCallback;  // 线程初始化回调函数
 
   EventLoopThreadPool(EventLoop* baseLoop, const string& nameArg);
   ~EventLoopThreadPool();
   void setThreadNum(int numThreads) { numThreads_ = numThreads; }
   void start(const ThreadInitCallback& cb = ThreadInitCallback());
 
-  // valid after calling start()
-  /// round-robin
-  EventLoop* getNextLoop();
+  EventLoop* getNextLoop(); // 返回一个可用的loop*
 
   /// with the same hash code, it will always return the same EventLoop
   EventLoop* getLoopForHash(size_t hashCode);
 
-  std::vector<EventLoop*> getAllLoops();
+  std::vector<EventLoop*> getAllLoops();  // Evnetloop线程池对象持有指向所有loop对象的vector
 
   bool started() const
   { return started_; }
@@ -62,13 +48,12 @@ class EventLoopThreadPool : noncopyable
   bool started_;
   int numThreads_;
   int next_;
-  /// 线程列表
-  std::vector<std::unique_ptr<EventLoopThread>> threads_;
-  /// loop 列表
-  std::vector<EventLoop*> loops_;
+
+  std::vector<std::unique_ptr<EventLoopThread>> threads_; // eventloopthread线程指针列表, 线程对象在堆上
+  std::vector<EventLoop*> loops_; // eventloop对象指针的vector, loop对象建在线程对象内部
 };
 
 }  // namespace net
 }  // namespace muduo
 
-#endif  // MUDUO_NET_EVENTLOOPTHREADPOOL_H
+#endif  // MUDUO_NET_EVENTLOOPTHREADPOOL_H_

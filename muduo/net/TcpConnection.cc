@@ -1,12 +1,6 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-
 #include "muduo/net/TcpConnection.h"
+
+#include <errno.h>
 
 #include "muduo/base/Logging.h"
 #include "muduo/base/WeakCallback.h"
@@ -15,12 +9,10 @@
 #include "muduo/net/Socket.h"
 #include "muduo/net/SocketsOps.h"
 
-#include <errno.h>
-
 using namespace muduo;
 using namespace muduo::net;
 
-void muduo::net::defaultConnectionCallback(const TcpConnectionPtr& conn)
+void muduo::net::defaultConnectionCallback(const TcpConnectionPtr& conn)  // 默认连接回调函数
 {
   LOG_TRACE << conn->localAddress().toIpPort() << " -> "
             << conn->peerAddress().toIpPort() << " is "
@@ -30,45 +22,39 @@ void muduo::net::defaultConnectionCallback(const TcpConnectionPtr& conn)
 
 void muduo::net::defaultMessageCallback(const TcpConnectionPtr&,
                                         Buffer* buf,
-                                        Timestamp)
+                                        Timestamp)  // 默认信息传来回调函数, 传入TcpConnectionPtr, buf, 时间戳, 将可读信息写入buf中
 {
   buf->retrieveAll();
 }
 
-/// 
 TcpConnection::TcpConnection(EventLoop* loop,
                              const string& nameArg,
                              int sockfd,
                              const InetAddress& localAddr,
-                             const InetAddress& peerAddr)
-  : loop_(loop), // loop对象
+                             const InetAddress& peerAddr) // 构造函数, 用所属loop对象指针, sockfd, Addr
+  : loop_(loop), // loop指针
     name_(nameArg),
     state_(kConnecting),
-    
     reading_(true),
-    socket_(new Socket(sockfd)),
-    /// 构造channel_对象, Channel存在堆上
-    channel_(new Channel(loop, sockfd)),
+    socket_(new Socket(sockfd)),  // 用sockfd创建Socket
+    channel_(new Channel(loop, sockfd)), // 用loop指针和sockfd创建Channel
     localAddr_(localAddr),
     peerAddr_(peerAddr),
     highWaterMark_(64*1024*1024)
 {
-  // 在channel中设置TcpConnection回调函数
-  // eventloop有活跃fd之后首先调channel, channel根据条件调&TcpConnection::handleRead等函数。
-
-  // 主语ReadCallback会多于messageCallback_, 比如会执行所有read到buffer中再调用messageCallback_
+  // tcpconnection的回调函数注册到channel中
   channel_->setReadCallback(
-      std::bind(&TcpConnection::handleRead, this, _1));
-  /// 可写回调
+      std::bind(&TcpConnection::handleRead, this, _1)); // 设置Channel可读回调函数&TcpConnection::handleRead
   channel_->setWriteCallback(
-      std::bind(&TcpConnection::handleWrite, this));
+      std::bind(&TcpConnection::handleWrite, this));  // Channel可写回调函数&TcpConnection::handleWrite
+  
   channel_->setCloseCallback(
-      std::bind(&TcpConnection::handleClose, this));
+      std::bind(&TcpConnection::handleClose, this));  // Channel关闭回调函数&TcpConnection::handleClose
   channel_->setErrorCallback(
-      std::bind(&TcpConnection::handleError, this));
+      std::bind(&TcpConnection::handleError, this));  // Channel错误回调函数
   LOG_DEBUG << "TcpConnection::ctor[" <<  name_ << "] at " << this
             << " fd=" << sockfd;
-  socket_->setKeepAlive(true);
+  socket_->setKeepAlive(true);  // 设置socket_为keepAlive
 }
 
 TcpConnection::~TcpConnection()
@@ -79,84 +65,69 @@ TcpConnection::~TcpConnection()
   assert(state_ == kDisconnected);
 }
 
-/// Tcp的选项信息
 bool TcpConnection::getTcpInfo(struct tcp_info* tcpi) const
 {
-  return socket_->getTcpInfo(tcpi);
+  return socket_->getTcpInfo(tcpi); // 调用socket_得到tcp的信息储存在tcp_info中
 }
 
 string TcpConnection::getTcpInfoString() const
 {
   char buf[1024];
   buf[0] = '\0';
-  socket_->getTcpInfoString(buf, sizeof buf);
+  socket_->getTcpInfoString(buf, sizeof buf); // tcp信息放入buf中返回
   return buf;
 }
 
-void TcpConnection::send(const void* data, int len)
+void TcpConnection::send(const void* data, int len) // send函数
 {
   send(StringPiece(static_cast<const char*>(data), len));
 }
 
-/// 发送信息， StringPiece格式
-void TcpConnection::send(const StringPiece& message)
+void TcpConnection::send(const StringPiece& message) /// 发送信息， StringPiece格式
 {
-  if (state_ == kConnected)
+  if (state_ == kConnected) // 如果TcpConnection已经连接
   {
-    /// 必须是创建eventloop的线程
-    if (loop_->isInLoopThread())
+    if (loop_->isInLoopThread())  // 在loop所在线程运行
     {
-      sendInLoop(message);
+      sendInLoop(message);  // 调用sendInLoop发送
     }
     else
     {
-      /// 函数指针, 指向&TcpConnection::sendInLoop;
-      void (TcpConnection::*fp)(const StringPiece& message) = &TcpConnection::sendInLoop;
-      /// 在eventloop的线程中运行&TcpConnection::sendInLoop
+      void (TcpConnection::*fp)(const StringPiece& message) = &TcpConnection::sendInLoop; // 函数指针, 指向传入message函数, &TcpConnection::sendInLoop
       loop_->runInLoop(
           std::bind(fp,
-                    this,     // FIXME
-                    message.as_string()));
-                    //std::forward<string>(message)));
+                    this, 
+                    message.as_string()));  // 加入到loop所在线程的等待队列
     }
   }
 }
 
-// FIXME efficiency!!!
-void TcpConnection::send(Buffer* buf)
+void TcpConnection::send(Buffer* buf) // 
 {
   if (state_ == kConnected)
   {
-    /// fd所属线程直接写
     if (loop_->isInLoopThread())
     {
-      sendInLoop(buf->peek(), buf->readableBytes());
-      buf->retrieveAll();
+      sendInLoop(buf->peek(), buf->readableBytes());  // 调用sendInLoop发送信息
+      buf->retrieveAll();   // 重置buf
     }
     else
     {
-      void (TcpConnection::*fp)(const StringPiece& message) = &TcpConnection::sendInLoop;
+      void (TcpConnection::*fp)(const StringPiece& message) = &TcpConnection::sendInLoop; // 函数指针运行fp
       loop_->runInLoop(
-        /// 执行fp函数
           std::bind(fp,
-                    this,     // FIXME
+                    this, 
                     buf->retrieveAllAsString()));
-                    //std::forward<string>(message)));
     }
   }
 }
 
-/// 对IO和buffer的读写，都应该在IO线程中完成。
-/// 这可以防止多线程的竞态
-/// runInLoop函数，将该写任务抛给了io线程处理。
-void TcpConnection::sendInLoop(const StringPiece& message)
+void TcpConnection::sendInLoop(const StringPiece& message)  // 调用TcpConnection::sendInLoop(const void* data, size_t len)
 {
   sendInLoop(message.data(), message.size());
 }
 
-/// send格式为*data c语言指针形式
-/// 发送数据, 核心是调用sockets::write
-void TcpConnection::sendInLoop(const void* data, size_t len)
+void TcpConnection::sendInLoop(const void* data, size_t len)  // 发送data数据到fd write缓冲区
 {
   loop_->assertInLoopThread();
   ssize_t nwrote = 0;
@@ -167,27 +138,22 @@ void TcpConnection::sendInLoop(const void* data, size_t len)
     LOG_WARN << "disconnected, give up writing";
     return;
   }
-  // if no thing in output queue, try writing directly
-  /// 没有正在写channel_ channal可写, 且没有要读的字节
-  if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
+  if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0) // channel通道没有在写, 且没有要读的字节
   {
-    /// 向sockets中channel_->fd()写data数据, 直接写, 写了nwrote字节
-    nwrote = sockets::write(channel_->fd(), data, len);
-    /// 写成功
-    if (nwrote >= 0)
+    nwrote = sockets::write(channel_->fd(), data, len); // 直接调用socket::write向channel_的fd写data数据
+
+    if (nwrote >= 0)  //  写成功
     {
-      remaining = len - nwrote;
-      if (remaining == 0 && writeCompleteCallback_)
+      remaining = len - nwrote; // 是否有没写完的字节
+      if (remaining == 0 && writeCompleteCallback_) // 全部字节已经写完
       {
-        /// 将writeCompleteCallback_回调函数加入到队列中, 执行之
-        loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
+        loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this())); // 将writeCompleteCallback_回调函数加入所属loop队列的中, 唤醒子线程执行
       }
     }
-    /// 写失败
-    else // nwrote < 0
+    else // nwrote < 0, 写入失败
     {
       nwrote = 0;
-      if (errno != EWOULDBLOCK)
+      if (errno != EWOULDBLOCK) //是否有EWOULDBLOCK错误
       {
         LOG_SYSERR << "TcpConnection::sendInLoop";
         if (errno == EPIPE || errno == ECONNRESET) // FIXME: any others?
@@ -197,31 +163,25 @@ void TcpConnection::sendInLoop(const void* data, size_t len)
       }
     }
   }
-
   assert(remaining <= len);
-  /// 没写完的先放入outputBuffer_
-  if (!faultError && remaining > 0)
+  if (!faultError && remaining > 0) // 这只是单纯的数据没写完, 没有错误
   {
-    size_t oldLen = outputBuffer_.readableBytes();
+    size_t oldLen = outputBuffer_.readableBytes();  // outputBuffer的可读字节数(TcpConnection去写)
     if (oldLen + remaining >= highWaterMark_
         && oldLen < highWaterMark_
         && highWaterMarkCallback_)
     {
       loop_->queueInLoop(std::bind(highWaterMarkCallback_, shared_from_this(), oldLen + remaining));
     }
-    //// 先放入outputbuffer
-    outputBuffer_.append(static_cast<const char*>(data)+nwrote, remaining);
-    
+
+    outputBuffer_.append(static_cast<const char*>(data)+nwrote, remaining);     // 剩下的字节remaining先放入outputbuffer
     if (!channel_->isWriting())
     {
-      channel_->enableWriting();
+      channel_->enableWriting();  // TcpConnection设置channel可写监听
     }
   }
 }
-
-
-/// TcpConnection执行&TcpConnection::shutdownInLoop
-void TcpConnection::shutdown()
+void TcpConnection::shutdown() // TcpConnection执行&TcpConnection::shutdownInLoop
 {
   // FIXME: use compare and swap
   if (state_ == kConnected)
@@ -231,22 +191,18 @@ void TcpConnection::shutdown()
     loop_->runInLoop(std::bind(&TcpConnection::shutdownInLoop, this));
   }
 }
-
-
 void TcpConnection::shutdownInLoop()
 {
   loop_->assertInLoopThread();
-  /// 如果不再写
-  if (!channel_->isWriting())
+  if (!channel_->isWriting()) // channel不在写
   {
     // we are not writing
-    socket_->shutdownWrite();
+    socket_->shutdownWrite(); // 关闭写
   }
 }
 
-/// 强制关闭
-void TcpConnection::forceClose()
-{
+void TcpConnection::forceClose() // 强制关闭, 执行&TcpConnection::forceCloseInLoop
+{ 
   // FIXME: use compare and swap
   if (state_ == kConnected || state_ == kDisconnecting)
   {
@@ -272,8 +228,7 @@ void TcpConnection::forceCloseInLoop()
   loop_->assertInLoopThread();
   if (state_ == kConnected || state_ == kDisconnecting)
   {
-    // as if we received 0 byte in handleRead();
-    handleClose();
+    handleClose();  // 关闭处理函数
   }
 }
 
@@ -294,13 +249,12 @@ const char* TcpConnection::stateToString() const
   }
 }
 
-
 void TcpConnection::setTcpNoDelay(bool on)
 {
   socket_->setTcpNoDelay(on);
 }
 
-void TcpConnection::startRead()
+void TcpConnection::startRead() // 开始读
 {
   loop_->runInLoop(std::bind(&TcpConnection::startReadInLoop, this));
 }
@@ -308,8 +262,7 @@ void TcpConnection::startRead()
 void TcpConnection::startReadInLoop()
 {
   loop_->assertInLoopThread();
-  /// 设置channel可读
-  if (!reading_ || !channel_->isReading())
+  if (!reading_ || !channel_->isReading())   // 设置channel可读
   {
     channel_->enableReading();
     reading_ = true;
@@ -331,89 +284,69 @@ void TcpConnection::stopReadInLoop()
   }
 }
 
-// 连接建立函数,这个函数子线程来执行 
-// 子线程调用&TcpConnection::connectEstablished会传入conn作为this, conn内部有loop_指针(指向子线程内部loop对象, 这个loop_指针是从loop池子里拿出的)
-// channel_里面也有这样的loop_指针
-void TcpConnection::connectEstablished()
+void TcpConnection::connectEstablished()  // Tcp连接建立, Acceptor的accept成功后自动调用
 {
   loop_->assertInLoopThread();
   assert(state_ == kConnecting);
   setState(kConnected);
-  // channel绑定到Connection,实现channel到Connection的调用 shared_from_this是维护Connection堆对象
-  channel_->tie(shared_from_this());
-  // channel_中有指向子线程loop的指针, 调用之用子线程的poller注册监听的fd。从而注册到了子线程身上
-  channel_->enableReading();
-  // 连接回调函数
-  connectionCallback_(shared_from_this());
+  channel_->tie(shared_from_this());  // channel绑定到Connection,实现channel到Connection的调用
+  channel_->enableReading();  // 设置channel_可读, 注册channel可读到poll中
+  connectionCallback_(shared_from_this());   // 连接回调函数
 }
 
-
-/// 连接销毁， 关闭channel
-void TcpConnection::connectDestroyed()
-{
+void TcpConnection::connectDestroyed() // 连接销毁， 关闭channel
+{ 
   loop_->assertInLoopThread();
 
   if (state_ == kConnected)
   {
     setState(kDisconnected);
-    /// 关闭channel
-    channel_->disableAll();
-
+    channel_->disableAll();     // 关闭channel, 设置channel为空事件
     connectionCallback_(shared_from_this());
   }
   channel_->remove();
 }
 
-
-/// handleRead, 实际调用messageCallback_回调函数
-void TcpConnection::handleRead(Timestamp receiveTime)
+void TcpConnection::handleRead(Timestamp receiveTime) // handleRead, Channel可读事件后调用这个回调函数。先read数据到缓冲区, 再调用处理函数
 {
   loop_->assertInLoopThread();
   int savedErrno = 0;
-
-  /// 一旦可读, inputBuffer_自动读取channel_->fd()的数据。放入inputBuffer_的writable中了
+  // 事件可读, 自动读取channel_->fd()的数据到inputBuffer_中
   ssize_t n = inputBuffer_.readFd(channel_->fd(), &savedErrno);
   if (n > 0)
   {
-    /// 数据读取到inputbuffer中之后, 再自动执行回调函数(用户注册的数据处理函数)
+    // 数据读取到inputbuffer, 再自动事件回调函数(用户注册的数据处理函数)
     messageCallback_(shared_from_this(), &inputBuffer_, receiveTime);
   }
-  /// 没有字节说明读完毕
-  else if (n == 0)
+  else if (n == 0) // 没有字节说明需要关闭连接
   {
     handleClose();
   }
   else
   {
-    errno = savedErrno;
+    errno = savedErrno; // 出现错误(n<0 ??)
     LOG_SYSERR << "TcpConnection::handleRead";
     handleError();
   }
 }
 
-/// 写回调函数
-void TcpConnection::handleWrite()
+void TcpConnection::handleWrite() // Channel可写事件触发后会回调函数, (用户将数据写到了outputbuffer), 将outputbuffer数据发给对面
 {
   loop_->assertInLoopThread();
-  /// channel可写
-  if (channel_->isWriting())
+  if (channel_->isWriting())   // channel可写
   {
-
-    /// 写socket, 向fd从
     ssize_t n = sockets::write(channel_->fd(),
                                outputBuffer_.peek(),
-                               outputBuffer_.readableBytes());
+                               outputBuffer_.readableBytes());  // 向channel->fd写入outputBuffer的数据
     if (n > 0)
     {
       outputBuffer_.retrieve(n);
       if (outputBuffer_.readableBytes() == 0)
       {
-        channel_->disableWriting();
-
-        /// 执行写毕回调函数
+        channel_->disableWriting(); // 设置channel不可写
         if (writeCompleteCallback_)
         {
-          loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
+          loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));  // 执行写毕回调函数
         }
         if (state_ == kDisconnecting)
         {
@@ -424,10 +357,6 @@ void TcpConnection::handleWrite()
     else
     {
       LOG_SYSERR << "TcpConnection::handleWrite";
-      // if (state_ == kDisconnecting)
-      // {
-      //   shutdownInLoop();
-      // }
     }
   }
   else
@@ -437,8 +366,7 @@ void TcpConnection::handleWrite()
   }
 }
 
-
-void TcpConnection::handleClose()
+void TcpConnection::handleClose() // 关闭连接的事件回调函数
 {
   loop_->assertInLoopThread();
   LOG_TRACE << "fd = " << channel_->fd() << " state = " << stateToString();
@@ -454,7 +382,7 @@ void TcpConnection::handleClose()
   closeCallback_(guardThis);
 }
 
-void TcpConnection::handleError()
+void TcpConnection::handleError() // 错误回调函数
 {
   int err = sockets::getSocketError(channel_->fd());
   LOG_ERROR << "TcpConnection::handleError [" << name_
