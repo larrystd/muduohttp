@@ -94,8 +94,7 @@ void EPollPoller::fillActiveChannels(int numEvents,
   {
     /// 转型events_[i].data.ptr指针转为channel指针, 显然events_[i].data.ptr指向的是Channel对象
     Channel* channel = static_cast<Channel*>(events_[i].data.ptr);  // 这句话让channel有了data数据, 在update中已经有了event.data.ptr = channel
-  /// events是epoll注册的事件
-    channel->set_revents(events_[i].events);  // 将已经活跃的事件注册到对应的channel中, 让channel有了events数据
+    channel->set_revents(events_[i].events);  // 将已经活跃的事件类型revents设置在channel, revent不同于event, 后者为用户注册的事件类型, 前者为返回的类型
     activeChannels->push_back(channel); // 活跃channel列表
   }
 }
@@ -131,6 +130,7 @@ void EPollPoller::updateChannel(Channel* channel) // 根据传入的channel, 在
   {
     // update existing one with EPOLL_CTL_MOD/DEL
     int fd = channel->fd();
+    (void)fd; // 防止报没有使用变量的警告
     assert(channels_.find(fd) != channels_.end());
     assert(channels_[fd] == channel);
     assert(index == kAdded);
@@ -159,6 +159,7 @@ void EPollPoller::removeChannel(Channel* channel)
   assert(index == kAdded || index == kDeleted); // index只能为kadd或kdelete
 
   size_t n = channels_.erase(fd); // 从channels_ map删除fd对
+  (void)n;
   assert(n == 1);
   if (index == kAdded)
   {

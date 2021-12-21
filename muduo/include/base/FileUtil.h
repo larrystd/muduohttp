@@ -1,12 +1,5 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is a public header file, it must only include public header files.
-
-#ifndef MUDUO_BASE_FILEUTIL_H
-#define MUDUO_BASE_FILEUTIL_H
+#ifndef MUDUO_BASE_FILEUTIL_H_
+#define MUDUO_BASE_FILEUTIL_H_
 
 #include "muduo/base/noncopyable.h"
 #include "muduo/base/StringPiece.h"
@@ -35,7 +28,7 @@ class ReadSmallFile : noncopyable
                    int64_t* createTime);
 
   /// Read at maxium kBufferSize into buf_
-  /// 读入缓冲
+  /// 读入到缓冲
   // return errno
   int readToBuffer(int* size);
 
@@ -46,6 +39,8 @@ class ReadSmallFile : noncopyable
  private:
   int fd_;
   int err_;
+
+  // 小文件读取到的缓冲区
   char buf_[kBufferSize];
 };
 
@@ -63,7 +58,7 @@ int readFile(StringArg filename,
 }
 
 // not thread safe
-/// 增加文件数据
+/// 可顺序写的文件(日志文件是可顺序写的)
 class AppendFile : noncopyable
 {
  public:

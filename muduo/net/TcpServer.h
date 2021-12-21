@@ -16,10 +16,7 @@ class Acceptor;
 class EventLoop;
 class EventLoopThreadPool;
 
-///
 /// TCP server, supports single-threaded and thread-pool models.
-///
-/// This is an interface class, so don't expose too much details.
 class TcpServer : noncopyable
 {
  public:
@@ -40,12 +37,10 @@ class TcpServer : noncopyable
   const string& name() const { return name_; }
   EventLoop* getLoop() const { return loop_; }
 
-  void setThreadNum(int numThreads);
+  void setThreadNum(int numThreads);  // 线程个数
   void setThreadInitCallback(const ThreadInitCallback& cb)
   { threadInitCallback_ = cb; }
-  /// valid after calling start()
-  /// EventLoopThreadPool
-  std::shared_ptr<EventLoopThreadPool> threadPool()
+  std::shared_ptr<EventLoopThreadPool> threadPool() // 线程池对象
   { return threadPool_; }
 
   /// Starts the server if it's not listening.
@@ -63,7 +58,7 @@ class TcpServer : noncopyable
   { writeCompleteCallback_ = cb; }  // 写毕回调函数
 
  private:
-  /// Not thread safe, but in loop
+  /// Not thread safe, but in loop, 新的连接
   void newConnection(int sockfd, const InetAddress& peerAddr);
   /// Thread safe.
   void removeConnection(const TcpConnectionPtr& conn);
@@ -78,16 +73,15 @@ class TcpServer : noncopyable
   std::unique_ptr<Acceptor> acceptor_; // avoid revealing Acceptor
   std::shared_ptr<EventLoopThreadPool> threadPool_; // eventloopthread线程池
 
-  /// 回调函数, 对应于TcpConnection
+  // 回调函数, 对应于TcpConnection, 注册到Channel
   ConnectionCallback connectionCallback_;
   MessageCallback messageCallback_;
   WriteCompleteCallback writeCompleteCallback_;
   ThreadInitCallback threadInitCallback_;
   AtomicInt32 started_;
-  // always in loop thread
-  int nextConnId_;
-  /// map维护的connections
-  ConnectionMap connections_;
+
+  int nextConnId_;  // 下一个连接
+  ConnectionMap connections_;   // map维护的connections, 包含若干TcpConnection
 };
 
 }  // namespace net

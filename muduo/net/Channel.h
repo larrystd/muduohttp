@@ -35,6 +35,7 @@ class Channel : noncopyable
 
   void handleEvent(Timestamp receiveTime);   // 事件处理函数，传入接收时间
 
+  // 回调函数, 通过TcpConnection设置
   void setReadCallback(ReadEventCallback cb)  // 设置读时间回调
   { readCallback_ = std::move(cb);  }
   void setWriteCallback(EventCallback cb) // 写回调函数
@@ -93,7 +94,7 @@ class Channel : noncopyable
   EventLoop* loop_; // Channel会被某个eventloop负责
   const int  fd_; // Channel维护的fd
 
-  int        events_; // Channel的事件
+  int        events_; // Channel监听的事件, 在enableReading, enableWriting设置并调用loop::updatechannel将Channel(主要是event和fd)注册到poller
   int        revents_;   // poll 传回的事件
   int        index_;   // poll要对fd进行的操作，例如kdeleted等
   bool       logHup_;
@@ -102,7 +103,8 @@ class Channel : noncopyable
   bool tied_;
   bool eventHandling_;
   bool addedToLoop_;
-  ReadEventCallback readCallback_;   // 回调函数
+
+  ReadEventCallback readCallback_;   // 回调函数, 这里设置的TcpConnection的回调函数注册到Channel中
   EventCallback writeCallback_;
   EventCallback closeCallback_;
   EventCallback errorCallback_;

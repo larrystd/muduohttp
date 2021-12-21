@@ -1,12 +1,3 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-
 #include "http/HttpServer.h"
 
 #include "muduo/include/base/Logging.h"
@@ -36,7 +27,7 @@ void defaultHttpCallback(const HttpRequest&, HttpResponse* resp)
 }  // namespace muduo
 
 /// 构造函数
-/// 设置用户定义的回调函数
+/// 设置用户定义的回调函数, TcpServer也是参数
 HttpServer::HttpServer(EventLoop* loop,
                        const InetAddress& listenAddr,
                        const string& name,
@@ -44,6 +35,7 @@ HttpServer::HttpServer(EventLoop* loop,
   : server_(loop, listenAddr, name, option),
     httpCallback_(detail::defaultHttpCallback)
 {
+  // 设置tcpserver的回调函数
   server_.setConnectionCallback(
       std::bind(&HttpServer::onConnection, this, _1));
     ///封装到tcp的messageBack
@@ -51,7 +43,7 @@ HttpServer::HttpServer(EventLoop* loop,
       std::bind(&HttpServer::onMessage, this, _1, _2, _3));
 }
 
-/// httpserver::start, 转调用tcpserver的start
+// httpserver::start, 转调用tcpserver的start
 void HttpServer::start()
 {
   LOG_WARN << "HttpServer[" << server_.name()
@@ -59,7 +51,7 @@ void HttpServer::start()
   server_.start();
 }
 
-/// 有连接. 调用连接
+// 有连接. 调用连接
 void HttpServer::onConnection(const TcpConnectionPtr& conn)
 {
   if (conn->connected())
@@ -73,22 +65,22 @@ void HttpServer::onMessage(const TcpConnectionPtr& conn,
                            Buffer* buf,
                            Timestamp receiveTime)
 {
-  /// 直接将conn->getMutableContext()转为HttpContext类型
+  // 直接将conn->getMutableContext()转为HttpContext类型
   HttpContext* context = boost::any_cast<HttpContext>(conn->getMutableContext());
 
-  /// 调用context->parseRequest解析存在Buffer里的请求, 不能解析执行400 bad request
-  /// 将请求字符串的信息设置为request的属性
+  // 调用context->parseRequest解析存在Buffer里的请求, 不能解析执行400 bad request
+  // 将请求字符串的信息设置为request的属性
   if (!context->parseRequest(buf, receiveTime))
   {
-    /// 直接发送400
+    // 直接发送400
     conn->send("HTTP/1.1 400 Bad Request\r\n\r\n");
     conn->shutdown();
   }
 
-  /// 调用context->gotAll()解析完毕， 调用onRequest
+  // 调用context->gotAll()解析完毕， 调用onRequest
   if (context->gotAll())
   {
-    /// 调用onRequest
+    // 调用onRequest
     onRequest(conn, context->request());
     context->reset();
   }
@@ -96,7 +88,7 @@ void HttpServer::onMessage(const TcpConnectionPtr& conn,
 
 void HttpServer::onRequest(const TcpConnectionPtr& conn, const HttpRequest& req)
 {
-  /// 处理request
+  // 处理request
   const string& connection = req.getHeader("Connection");
   bool close = connection == "close" ||
     (req.getVersion() == HttpRequest::kHttp10 && connection != "Keep-Alive");

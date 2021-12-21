@@ -11,6 +11,7 @@
 using namespace muduo;
 using namespace muduo::net;
 
+// TcpServer主要包含, 一个loop主循环, 一个acceptor接受连接, 一个线程池threadPool分配, 若干tcpConnection通信连接, 一些用户设置的回调函数注册到tcpConnection中
 TcpServer::TcpServer(EventLoop* loop,
                      const InetAddress& listenAddr,
                      const string& nameArg,
@@ -18,7 +19,7 @@ TcpServer::TcpServer(EventLoop* loop,
   : loop_(loop),  // tcpserver的主loop
     ipPort_(listenAddr.toIpPort()),
     name_(nameArg),
-    acceptor_(new Acceptor(loop, listenAddr, option == kReusePort)), // 初始化acceptor监听socket,(调用listen(才开始监听)
+    acceptor_(new Acceptor(loop, listenAddr, option == kReusePort)), // 初始化acceptor对象监听socket,(调用listen(才开始监听)
     threadPool_(new EventLoopThreadPool(loop, name_)),     // 构造threadPool对象
     /// 初始化connection回调函数和message回调函数
     connectionCallback_(defaultConnectionCallback),
@@ -81,6 +82,7 @@ void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)  // 新�
                                           localAddr,
                                           peerAddr)); // 来了一个连接就创建一个TcpConnection,用子线程的loop指针, 该对象用shared_ptr维护
   
+  // 设置好TcpConnection的回调函数, 这些回调函数来自于用户编写的逻辑
   connections_[connName] = conn;  // coonection name->conn的map
   conn->setConnectionCallback(connectionCallback_); // 设置tcpconnection的连接回调函数, 来自用户自定义。以下同样
   conn->setMessageCallback(messageCallback_);

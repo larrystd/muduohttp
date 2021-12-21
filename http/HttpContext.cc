@@ -1,20 +1,10 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-
 #include "muduo/include/net/Buffer.h"
 #include "http/HttpContext.h"
 #include <assert.h>
 using namespace muduo;
 using namespace muduo::net;
 
-/// 从buf解析请求
-bool HttpContext::processRequestLine(const char* begin, const char* end)
+bool HttpContext::processRequestLine(const char* begin, const char* end) // 解析请求行
 {
   bool succeed = false;
   const char* start = begin;
@@ -86,7 +76,7 @@ bool HttpContext::parseRequest(Buffer* buf, Timestamp receiveTime)
         /// 从buf中找到crlf
         // buf中存储的字符如"GET / HTTP/1.1\r\nHost: 127.0.0.1:8000\r\nUser-Agent: curl/7.61.0\r\nAccept: 
         /// 可以解析出method, httpversion
-        ok = processRequestLine(buf->peek(), crlf);
+        ok = processRequestLine(buf->peek(), crlf); 
         if (ok)
         {
           request_.setReceiveTime(receiveTime);
@@ -106,14 +96,14 @@ bool HttpContext::parseRequest(Buffer* buf, Timestamp receiveTime)
       }
     }
     /// 该解析请求头了
-    else if (state_ == kExpectHeaders)
+    else if (state_ == kExpectHeaders)  // 解析请求头
     {
       /// 请求头结束的地方
       const char* crlf = buf->findCRLF();
       if (crlf)
       {
         /// 在buf->peek()到crlf寻找:, peek是可读buf地址
-        const char* colon = std::find(buf->peek(), crlf, ':');
+        const char* colon = std::find(buf->peek(), crlf, ':');  
         if (colon != crlf)  // 如果可以找到
         {
           request_.addHeader(buf->peek(), colon, crlf);

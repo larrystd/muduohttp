@@ -49,6 +49,7 @@ set(HEADERS
   TcpClient.h
   TcpConnection.h
   TcpServer.h
-  TimerId.h
+  TimerId.h,
+  Timer.h
   )
 install(FILES ${HEADERS} DESTINATION include/net)

@@ -59,6 +59,18 @@ CMAKE_BINARY_DIR = /home/larry/myproject/muduohttp/http/build
 #=============================================================================
 # Targets provided globally by CMake.
 
+# Special rule for the target install/local
+install/local: preinstall
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
+	/usr/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+.PHONY : install/local
+
+# Special rule for the target install/local
+install/local/fast: preinstall/fast
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
+	/usr/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
+.PHONY : install/local/fast
+
 # Special rule for the target install
 install: preinstall
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
@@ -70,16 +82,6 @@ install/fast: preinstall/fast
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Install the project..."
 	/usr/local/bin/cmake -P cmake_install.cmake
 .PHONY : install/fast
-
-# Special rule for the target list_install_components
-list_install_components:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Available install components are: \"Unspecified\""
-.PHONY : list_install_components
-
-# Special rule for the target list_install_components
-list_install_components/fast: list_install_components
-
-.PHONY : list_install_components/fast
 
 # Special rule for the target install/strip
 install/strip: preinstall
@@ -93,6 +95,17 @@ install/strip/fast: preinstall/fast
 	/usr/local/bin/cmake -DCMAKE_INSTALL_DO_STRIP=1 -P cmake_install.cmake
 .PHONY : install/strip/fast
 
+# Special rule for the target edit_cache
+edit_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
+	/usr/local/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+.PHONY : edit_cache
+
+# Special rule for the target edit_cache
+edit_cache/fast: edit_cache
+
+.PHONY : edit_cache/fast
+
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
@@ -104,39 +117,15 @@ rebuild_cache/fast: rebuild_cache
 
 .PHONY : rebuild_cache/fast
 
-# Special rule for the target install/local
-install/local: preinstall
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
-	/usr/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
-.PHONY : install/local
+# Special rule for the target list_install_components
+list_install_components:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Available install components are: \"Unspecified\""
+.PHONY : list_install_components
 
-# Special rule for the target install/local
-install/local/fast: preinstall/fast
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Installing only the local directory..."
-	/usr/local/bin/cmake -DCMAKE_INSTALL_LOCAL_ONLY=1 -P cmake_install.cmake
-.PHONY : install/local/fast
+# Special rule for the target list_install_components
+list_install_components/fast: list_install_components
 
-# Special rule for the target test
-test:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running tests..."
-	/usr/local/bin/ctest --force-new-ctest-process $(ARGS)
-.PHONY : test
-
-# Special rule for the target test
-test/fast: test
-
-.PHONY : test/fast
-
-# Special rule for the target edit_cache
-edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
-	/usr/local/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
-.PHONY : edit_cache
-
-# Special rule for the target edit_cache
-edit_cache/fast: edit_cache
-
-.PHONY : edit_cache/fast
+.PHONY : list_install_components/fast
 
 # The main all target
 all: cmake_check_build_system
@@ -184,17 +173,17 @@ mysqllib/fast:
 .PHONY : mysqllib/fast
 
 #=============================================================================
-# Target rules for targets named httpserver_login
+# Target rules for targets named httpserver_test
 
 # Build rule for target.
-httpserver_login: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 httpserver_login
-.PHONY : httpserver_login
+httpserver_test: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 httpserver_test
+.PHONY : httpserver_test
 
 # fast build rule for target.
-httpserver_login/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_login.dir/build.make CMakeFiles/httpserver_login.dir/build
-.PHONY : httpserver_login/fast
+httpserver_test/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_test.dir/build.make CMakeFiles/httpserver_test.dir/build
+.PHONY : httpserver_test/fast
 
 #=============================================================================
 # Target rules for targets named muduo_http
@@ -290,6 +279,33 @@ HttpServer.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/muduo_http.dir/build.make CMakeFiles/muduo_http.dir/HttpServer.cc.s
 .PHONY : HttpServer.cc.s
 
+HttpServer_test.o: HttpServer_test.cc.o
+
+.PHONY : HttpServer_test.o
+
+# target to build an object file
+HttpServer_test.cc.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_test.dir/build.make CMakeFiles/httpserver_test.dir/HttpServer_test.cc.o
+.PHONY : HttpServer_test.cc.o
+
+HttpServer_test.i: HttpServer_test.cc.i
+
+.PHONY : HttpServer_test.i
+
+# target to preprocess a source file
+HttpServer_test.cc.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_test.dir/build.make CMakeFiles/httpserver_test.dir/HttpServer_test.cc.i
+.PHONY : HttpServer_test.cc.i
+
+HttpServer_test.s: HttpServer_test.cc.s
+
+.PHONY : HttpServer_test.s
+
+# target to generate assembly for a file
+HttpServer_test.cc.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_test.dir/build.make CMakeFiles/httpserver_test.dir/HttpServer_test.cc.s
+.PHONY : HttpServer_test.cc.s
+
 mysqlConn/mysql_conn.o: mysqlConn/mysql_conn.cc.o
 
 .PHONY : mysqlConn/mysql_conn.o
@@ -317,49 +333,21 @@ mysqlConn/mysql_conn.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mysqllib.dir/build.make CMakeFiles/mysqllib.dir/mysqlConn/mysql_conn.cc.s
 .PHONY : mysqlConn/mysql_conn.cc.s
 
-tests/HttpServer_login.o: tests/HttpServer_login.cc.o
-
-.PHONY : tests/HttpServer_login.o
-
-# target to build an object file
-tests/HttpServer_login.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_login.dir/build.make CMakeFiles/httpserver_login.dir/tests/HttpServer_login.cc.o
-.PHONY : tests/HttpServer_login.cc.o
-
-tests/HttpServer_login.i: tests/HttpServer_login.cc.i
-
-.PHONY : tests/HttpServer_login.i
-
-# target to preprocess a source file
-tests/HttpServer_login.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_login.dir/build.make CMakeFiles/httpserver_login.dir/tests/HttpServer_login.cc.i
-.PHONY : tests/HttpServer_login.cc.i
-
-tests/HttpServer_login.s: tests/HttpServer_login.cc.s
-
-.PHONY : tests/HttpServer_login.s
-
-# target to generate assembly for a file
-tests/HttpServer_login.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/httpserver_login.dir/build.make CMakeFiles/httpserver_login.dir/tests/HttpServer_login.cc.s
-.PHONY : tests/HttpServer_login.cc.s
-
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
 	@echo "... all (the default if no target is provided)"
 	@echo "... clean"
 	@echo "... depend"
+	@echo "... install/local"
 	@echo "... install"
-	@echo "... list_install_components"
 	@echo "... install/strip"
 	@echo "... mysqllib"
-	@echo "... httpserver_login"
-	@echo "... rebuild_cache"
-	@echo "... install/local"
-	@echo "... test"
+	@echo "... httpserver_test"
 	@echo "... muduo_http"
 	@echo "... edit_cache"
+	@echo "... rebuild_cache"
+	@echo "... list_install_components"
 	@echo "... HttpContext.o"
 	@echo "... HttpContext.i"
 	@echo "... HttpContext.s"
@@ -369,12 +357,12 @@ help:
 	@echo "... HttpServer.o"
 	@echo "... HttpServer.i"
 	@echo "... HttpServer.s"
+	@echo "... HttpServer_test.o"
+	@echo "... HttpServer_test.i"
+	@echo "... HttpServer_test.s"
 	@echo "... mysqlConn/mysql_conn.o"
 	@echo "... mysqlConn/mysql_conn.i"
 	@echo "... mysqlConn/mysql_conn.s"
-	@echo "... tests/HttpServer_login.o"
-	@echo "... tests/HttpServer_login.i"
-	@echo "... tests/HttpServer_login.s"
 .PHONY : help
 
 

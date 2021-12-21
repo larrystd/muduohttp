@@ -1,15 +1,5 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is a public header file, it must only include public header files.
-
-#ifndef MUDUO_NET_HTTP_HTTPRESPONSE_H
-#define MUDUO_NET_HTTP_HTTPRESPONSE_H
+#ifndef MUDUO_NET_HTTP_HTTPRESPONSE_H_
+#define MUDUO_NET_HTTP_HTTPRESPONSE_H_
 
 #include "muduo/include/base/copyable.h"
 #include "muduo/include/base/Types.h"
@@ -79,4 +69,4 @@ class HttpResponse : public muduo::copyable
 }  // namespace net
 }  // namespace muduo
 
-#endif  // MUDUO_NET_HTTP_HTTPRESPONSE_H
+#endif  // MUDUO_NET_HTTP_HTTPRESPONSE_H_

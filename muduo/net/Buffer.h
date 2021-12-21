@@ -165,7 +165,7 @@ class Buffer : public muduo::copyable
     append(str.data(), str.size());
   }
 
-  void append(const char* data, size_t len)
+  void append(const char* data, size_t len) // 从写索引开始append数据
   {
     // 这行保证是可写的，有可写空间对于len来说
     ensureWritableBytes(len);
@@ -192,9 +192,8 @@ class Buffer : public muduo::copyable
 
   const char* beginWrite() const
   { return begin() + writerIndex_; }
-  
-  // 更新可写的索引
-  void hasWritten(size_t len)
+
+  void hasWritten(size_t len)   // 更新可写的索引
   {
     assert(len <= writableBytes());
     writerIndex_ += len;

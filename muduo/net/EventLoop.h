@@ -46,42 +46,23 @@ class EventLoop : noncopyable
   ~EventLoop();  // force out-line dtor, for std::unique_ptr members.
 
   /// Loops forever.
-  ///
-  /// Must be called in the same thread as creation of the object.
   void loop();
-  /// This is not 100% thread safe, if you call through a raw pointer,
-  /// better to call through shared_ptr<EventLoop> for 100% safety.
   void quit();
 
-  /// Time when poll returns, usually means data arrival.
-  Timestamp pollReturnTime() const { return pollReturnTime_; }
+  Timestamp pollReturnTime() const { return pollReturnTime_; }  // poll触发返回的时间戳
 
   int64_t iteration() const { return iteration_; }
 
-  /// Runs callback immediately in the loop thread.
-  /// It wakes up the loop, and run the cb.
-  /// If in the same loop thread, cb is run within the function.
-  /// Safe to call from other threads.
-  void runInLoop(Functor cb);
-  /// Queues callback in the loop thread.
-  /// Runs after finish pooling.
-  /// Safe to call from other threads.
-  void queueInLoop(Functor cb);
+  void runInLoop(Functor cb); // 保证在loop所属线程中执行某函数, 如果在线程立即执行, 如果不在调用queueInLoop
+
+  void queueInLoop(Functor cb); // 放入到loop对象的等待队列中并触发loop对象所属线程执行
 
   size_t queueSize() const;
 
   // timers, 设置定时器任务
-  /// Runs callback at 'time'.
-  /// Safe to call from other threads.
-  TimerId runAt(Timestamp time, TimerCallback cb);
-  /// Runs callback after @c delay seconds.
-  /// Safe to call from other threads.
-  TimerId runAfter(double delay, TimerCallback cb);
-  /// Runs callback every @c interval seconds.
-  /// Safe to call from other threads.
-  TimerId runEvery(double interval, TimerCallback cb);
-  /// Cancels the timer.
-  /// Safe to call from other threads.
+  TimerId runAt(Timestamp time, TimerCallback cb);  // 某个时刻执行定时任务
+  TimerId runAfter(double delay, TimerCallback cb); // 再过某个时间段执行的定时任务
+  TimerId runEvery(double interval, TimerCallback cb);  // 设置一个循环定时器
   void cancel(TimerId timerId); // 取消定时器
 
   // internal usage
@@ -99,7 +80,7 @@ class EventLoop : noncopyable
       abortNotInLoopThread();
     }
   }
-  /// 当前线程idCurrentThread::tid() 为 构建thread_loop线程的id
+  // 当前线程idCurrentThread::tid() 为 构建thread_loop线程的id
   bool isInLoopThread() const { return threadId_ == CurrentThread::tid(); } 
   // bool callingPendingFunctors() const { return callingPendingFunctors_; }
   bool eventHandling() const { return eventHandling_; }
@@ -116,37 +97,27 @@ class EventLoop : noncopyable
   static EventLoop* getEventLoopOfCurrentThread();
 
  private:
-  // EventLoop对象创建者并非本线程
-  void abortNotInLoopThread();
-  // read waked up fd_
-  void handleRead();  // waked up
-  // 运行等待的任务
-  void doPendingFunctors();
-  // 打印ChannelList activeChannels_;
-  void printActiveChannels() const; // DEBUG
 
-  typedef std::vector<Channel*> ChannelList;
-  // 调用EventLoop，设置为true
-  bool looping_; /* atomic */
-  std::atomic<bool> quit_;
-  // 处理事件中
-  bool eventHandling_; /* atomic */
-  bool callingPendingFunctors_; /* atomic */
-  // 迭代次数
-  int64_t iteration_;
-  /// tid
-  const pid_t threadId_;
-  // pollReturnTime_ 时间戳
-  Timestamp pollReturnTime_;
-  /// poller和时间队列
-  std::unique_ptr<Poller> poller_;
-  std::unique_ptr<TimerQueue> timerQueue_;
+  void abortNotInLoopThread();   // EventLoop对象创建者并非本线程
+  void handleRead();    // wakefd触发的回调函数
+  void doPendingFunctors();   // 运行等待的任务
+  void printActiveChannels() const; // 打印当前被触发的channel
+
+  typedef std::vector<Channel*> ChannelList;  // 已经使用poll注册监听的channel
+  bool looping_; // 是否处于循环
+  std::atomic<bool> quit_;  // 设置原子的(这里没啥用, 因为loop对象不是线程共享的)
+  bool eventHandling_; // 在处理事件
+  bool callingPendingFunctors_; // 在执行PendingFunctors_
+  int64_t iteration_; // loop的迭代次数
+  const pid_t threadId_;    /// tid, loop对象所属线程的tid
+  Timestamp pollReturnTime_;   // pollReturnTime_ poll返回的时间戳
+  std::unique_ptr<Poller> poller_;  // poller_, IO多路复用
+  std::unique_ptr<TimerQueue> timerQueue_;  // 定时器队列
 
   int wakeupFd_;
   // unlike in TimerQueue, which is an internal class,
   // we don't expose Channel to client.
   std::unique_ptr<Channel> wakeupChannel_;
-
   boost::any context_;
 
   // scratch variables
@@ -154,8 +125,8 @@ class EventLoop : noncopyable
   Channel* currentActiveChannel_;
 
   mutable MutexLock mutex_;
-  /// 任务队列, 建立在线程栈中的
-  std::vector<Functor> pendingFunctors_ GUARDED_BY(mutex_);
+
+  std::vector<Functor> pendingFunctors_ GUARDED_BY(mutex_);   // 任务队列, 建立在线程栈中
 };
 
 }  // namespace net

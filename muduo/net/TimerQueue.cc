@@ -149,6 +149,7 @@ void TimerQueue::cancelInLoop(TimerId timerId)  // 根据timerId
   if (it != activeTimers_.end())  // 找到
   {
     size_t n = timers_.erase(Entry(it->first->expiration(), it->first));  // 从timers_集合中删除定时任务对象
+     (void)n;
     assert(n == 1);
     delete it->first; // 析构timer对象
     activeTimers_.erase(it);  // 从activeTimers_擦除timer
@@ -199,6 +200,7 @@ std::vector<TimerQueue::Entry> TimerQueue::getExpired(Timestamp now)  // now时�
   {
     ActiveTimer timer(it.second, it.second->sequence());  // 拷贝构造timer
     size_t n = activeTimers_.erase(timer);  
+    (void)n;
     assert(n == 1);
   }
   assert(timers_.size() == activeTimers_.size());
@@ -253,11 +255,13 @@ bool TimerQueue::insert(Timer* timer) // 将timer插入到
     std::pair<TimerList::iterator, bool> result
       = timers_.insert(Entry(when, timer)); // 将timer超时时间, timer插入到定时集合中
     assert(result.second);  // result.second应不为空
+    (void)result;
   }
 
   {
     std::pair<ActiveTimerSet::iterator, bool> result
       = activeTimers_.insert(ActiveTimer(timer, timer->sequence()));  // timer*. timer的序号加入到activeTimers_集合中
+    (void)result;
     assert(result.second);
   }
 

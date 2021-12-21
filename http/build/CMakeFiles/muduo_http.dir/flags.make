@@ -6,5 +6,5 @@ CXX_FLAGS =  -O0 -Wall -g2 -ggdb
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/larry/myproject/muduohttp -I/home/larry/myproject/muduohttp/http/mysqlConn 
+CXX_INCLUDES = -I/home/larry/myproject/muduohttp -I/home/larry/myproject/muduohttp/include -I/home/larry/myproject/muduohttp/http/mysqlConn 
 

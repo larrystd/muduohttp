@@ -22,23 +22,22 @@ class LogFile : noncopyable {
 
   ~LogFile();
 
-    // 在缓冲区后添加数据
+    // 在缓冲区后添加数据, 内部调用append_unlocked
   void append(const char* logline, int len);
   /// flush到文件
   void flush();
-  // 日志滚动, 也就是旧的删除, 新的顶上来。这是文件层面的, 比如最新的1.log会变化
-  bool rollFile();
+  bool rollFile();  // 滚动日志, 就是建新的日志文件写日志
 
  private:
- // 添加logline
-  void append_unlocked(const char* logline, int len);
-  
-  static string getLogFileName(const string& basename, time_t* now);
 
-  const string basename_;
-  const off_t rollSize_;
-  const int flushInterval_;
-  const int checkEveryN_;
+  void append_unlocked(const char* logline, int len); // 添加logline到日志文件fp缓冲区, 满足要求可flush
+  
+  static string getLogFileName(const string& basename, time_t* now);  // 日志文件名
+
+  const string basename_; // 文件名
+  const off_t rollSize_;  // 日志fp缓冲区数据如果超过rollSize_, 就要用新的文件写日志(roll)
+  const int flushInterval_; // flush间隔
+  const int checkEveryN_; // 连续写日志的次数, 连续写入次数超过checkEveryN_, 就要检查要滚动日志, flush了
 
   int count_;
 
@@ -47,15 +46,13 @@ class LogFile : noncopyable {
   // time_t 长整型, 
   // 时间1970年1月1日00时00分00秒(也称为Linux系统的Epoch时间)到当前时刻的秒数。
   time_t startOfPeriod_;
-  // 最后Roll_时刻
-  time_t lastRoll_;
-  // 最后Flush_时刻
-  time_t lastFlush_;
+  time_t lastRoll_;   // 最后Roll_时刻
+  time_t lastFlush_;  // 最后Flush_时刻
 
   std::unique_ptr<FileUtil::AppendFile> file_;  // unique_ptr维护的文件对象
 
-  const static int kRollPerSeconds_ = 60*60*24; // static常量
+  const static int kRollPerSeconds_ = 60*60*24; // static常量, 写新日志文件的周期
 };      // LogFile
 
 }  // namespace muduo
-#endif  // MUDUO_BASE_LOGFILE_H
+#endif  // MUDUO_BASE_LOGFILE_H_

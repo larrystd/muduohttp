@@ -1,15 +1,5 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is a public header file, it must only include public header files.
-
-#ifndef MUDUO_NET_TCPCLIENT_H
-#define MUDUO_NET_TCPCLIENT_H
+#ifndef MUDUO_NET_TCPCLIENT_H_
+#define MUDUO_NET_TCPCLIENT_H_
 
 #include "muduo/base/Mutex.h"
 #include "muduo/net/TcpConnection.h"
@@ -25,8 +15,7 @@ typedef std::shared_ptr<Connector> ConnectorPtr;
 class TcpClient : noncopyable
 {
  public:
-  // TcpClient(EventLoop* loop);
-  // TcpClient(EventLoop* loop, const string& host, uint16_t port);
+
   TcpClient(EventLoop* loop,
             const InetAddress& serverAddr,
             const string& nameArg);
@@ -84,11 +73,10 @@ class TcpClient : noncopyable
   int nextConnId_;
   mutable MutexLock mutex_;
 
-  /// 封装connection
-  TcpConnectionPtr connection_ GUARDED_BY(mutex_);
+  TcpConnectionPtr connection_ GUARDED_BY(mutex_);  // 封装connection
 };
 
 }  // namespace net
 }  // namespace muduo
 
-#endif  // MUDUO_NET_TCPCLIENT_H
+#endif  // MUDUO_NET_TCPCLIENT_H_

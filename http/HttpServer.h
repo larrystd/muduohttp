@@ -1,15 +1,5 @@
-// Copyright 2010, Shuo Chen.  All rights reserved.
-// http://code.google.com/p/muduo/
-//
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
-//
-// This is a public header file, it must only include public header files.
-
-#ifndef MUDUO_NET_HTTP_HTTPSERVER_H
-#define MUDUO_NET_HTTP_HTTPSERVER_H
+#ifndef MUDUO_NET_HTTP_HTTPSERVER_H_
+#define MUDUO_NET_HTTP_HTTPSERVER_H_
 
 #include "muduo/include/net/TcpServer.h"
 
@@ -40,9 +30,7 @@ class HttpServer : noncopyable
   /// 获取tcpserver的loop
   EventLoop* getLoop() const { return server_.getLoop(); }
 
-  /// Not thread safe, callback be registered before calling start().
-  /// http回调函数
-  void setHttpCallback(const HttpCallback& cb)
+  void setHttpCallback(const HttpCallback& cb)  // 用户自定义的逻辑函数
   {
     httpCallback_ = cb;
   }
@@ -62,11 +50,11 @@ class HttpServer : noncopyable
                  Timestamp receiveTime);
   void onRequest(const TcpConnectionPtr&, const HttpRequest&);
 
-  TcpServer server_;
+  TcpServer server_;  // httpServer维护一个TcpServer对象
   HttpCallback httpCallback_;
 };
 
 }  // namespace net
 }  // namespace muduo
 
-#endif  // MUDUO_NET_HTTP_HTTPSERVER_H
+#endif  // MUDUO_NET_HTTP_HTTPSERVER_H_

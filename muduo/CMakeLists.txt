@@ -21,7 +21,7 @@ set(CXX_FLAGS
  -D_FILE_OFFSET_BITS=64
  -Wall
  -Wextra
- -Werror
+# -Werror
  -Wconversion
  -Wno-unused-parameter
  -Wold-style-cast
@@ -52,7 +52,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
-set(CMAKE_INSTALL_PREFIX /home/larry/myproject/muduohttp/muduo)
+set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 find_package(Boost REQUIRED)
 
 find_library(BOOSTTEST_LIBRARY NAMES boost_unit_test_framework)

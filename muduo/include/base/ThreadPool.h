@@ -17,6 +17,7 @@
 namespace muduo
 {
 
+// 线程池, 是消费者线程池。多线程作为消费者
 class ThreadPool : noncopyable
 {
  public:
@@ -24,6 +25,7 @@ class ThreadPool : noncopyable
  /// 线程需要执行的函数, std::function<void() >
   typedef std::function<void ()> Task;
 
+  /// 必须用string对象以构造函数形式构造
   explicit ThreadPool(const string& nameArg = string("ThreadPool"));
   ~ThreadPool();
 
@@ -54,16 +56,15 @@ class ThreadPool : noncopyable
   bool isFull() const REQUIRES(mutex_);
   void runInThread();
   Task take();
-
+  // 互斥器和条件变量, 保证线程池大小在1~max之间
   mutable MutexLock mutex_;
   Condition notEmpty_ GUARDED_BY(mutex_);
   Condition notFull_ GUARDED_BY(mutex_);
   string name_;
-  /// 线程初始化回调函数
   Task threadInitCallback_;
-  /// thread vectors, 用unique_ptr维护, 因为thread不可拷贝
+  /// thread vectors, 线程对象用unique_ptr维护, 因为thread不可拷贝
   std::vector<std::unique_ptr<muduo::Thread>> threads_;
-  /// 任务队列
+  /// 任务队列, 元素是Task, std::function<void ()>
   std::deque<Task> queue_ GUARDED_BY(mutex_);
   size_t maxQueueSize_;
   bool running_;

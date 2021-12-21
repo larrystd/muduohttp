@@ -75,10 +75,11 @@ class TcpConnection : noncopyable,
   boost::any* getMutableContext()
   { return &context_; }
 
+  // TcpConnection的回调函数
   void setConnectionCallback(const ConnectionCallback& cb)   // 连接回调函数
   { connectionCallback_ = cb; }
 
-  void setMessageCallback(const MessageCallback& cb)   // 信息回调函数
+  void setMessageCallback(const MessageCallback& cb)   // 信息回调函数，std::function<void (const TcpConnectionPtr&,Buffer*,Timestamp)> 
   { messageCallback_ = cb; }
 
   void setWriteCompleteCallback(const WriteCompleteCallback& cb)   // 写毕回调函数

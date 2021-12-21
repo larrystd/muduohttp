@@ -1,38 +1,33 @@
-// Use of this source code is governed by a BSD-style license
-// that can be found in the License file.
-//
-// Author: Shuo Chen (chenshuo at chenshuo dot com)
+#ifndef MUDUO_BASE_TIMEZONE_H_
+#define MUDUO_BASE_TIMEZONE_H_
 
-#ifndef MUDUO_BASE_TIMEZONE_H
-#define MUDUO_BASE_TIMEZONE_H
+
+#include <time.h>
+#include <memory>
 
 #include "muduo/base/copyable.h"
-#include <memory>
-#include <time.h>
 
 namespace muduo
 {
 
-// TimeZone for 1970~2030
-class TimeZone : public muduo::copyable
+class TimeZone : public muduo::copyable // 时区
 {
  public:
-  explicit TimeZone(const char* zonefile);
-  TimeZone(int eastOfUtc, const char* tzname);  // a fixed timezone
-  TimeZone() = default;  // an invalid timezone
+  struct Data;
 
-  // default copy ctor/assignment/dtor are Okay.
+  explicit TimeZone(const char* zonefile);  // explicit要求必须按照此构造函数的类型构造, 构造函数参数是double, 输入的是int也不行
+  TimeZone(int eastofUtc, const char* tzname);
+  TimeZone() = default;
+  // 可以进行拷贝构造和拷贝赋值
 
-  bool valid() const
-  {
-    // 'explicit operator bool() const' in C++11
-    return static_cast<bool>(data_);
+  bool valid() const {
+    return static_cast<bool> (data_);
   }
 
   struct tm toLocalTime(time_t secondsSinceEpoch) const;
-  time_t fromLocalTime(const struct tm&) const;
+  time_t fromLocalTime(const struct tm&) const; //  time_t实际上长整型long int; 保存从1970年1月1日0时0分0秒到现在时刻的秒
 
-  // gmtime(3)
+    // gmtime(3)
   static struct tm toUtcTime(time_t secondsSinceEpoch, bool yday = false);
   // timegm(3)
   static time_t fromUtcTime(const struct tm&);
@@ -40,13 +35,10 @@ class TimeZone : public muduo::copyable
   static time_t fromUtcTime(int year, int month, int day,
                             int hour, int minute, int seconds);
 
-  struct Data;
-
  private:
-
   std::shared_ptr<Data> data_;
 };
 
-}  // namespace muduo
+} // namespace muduo
 
-#endif  // MUDUO_BASE_TIMEZONE_H
+#endif  // MUDUO_BASE_TIMEZONE_H_
