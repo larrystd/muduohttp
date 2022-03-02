@@ -26,6 +26,7 @@ TcpServer::TcpServer(EventLoop* loop,
     messageCallback_(defaultMessageCallback),
     nextConnId_(1)
 {
+  // 设置acceptor_的连接回调函数, 在handleread()中调用
   acceptor_->setNewConnectionCallback(
       std::bind(&TcpServer::newConnection, this, _1, _2)); // 新连接一旦到达, 自动回调TcpServer::newConnection封装为connection
 }
@@ -46,7 +47,7 @@ TcpServer::~TcpServer()
 
 void TcpServer::setThreadNum(int numThreads)
 {
-  assert(0 <= numThreads);
+  assert(0 <= numThreads); //
   threadPool_->setThreadNum(numThreads);
 }
 
@@ -84,13 +85,16 @@ void TcpServer::newConnection(int sockfd, const InetAddress& peerAddr)  // 新�
   
   // 设置好TcpConnection的回调函数, 这些回调函数来自于用户编写的逻辑
   connections_[connName] = conn;  // coonection name->conn的map
+
   conn->setConnectionCallback(connectionCallback_); // 设置tcpconnection的连接回调函数, 来自用户自定义。以下同样
   conn->setMessageCallback(messageCallback_);
   conn->setWriteCompleteCallback(writeCompleteCallback_);
   conn->setCloseCallback(
       std::bind(&TcpServer::removeConnection, this, _1));
 
-  ioLoop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn)); // 主线程将&TcpConnection::connectEstablished加入到子线程的loop对象的任务队列中, 使子线程自动执行任务
+  // master线程将到来的连接封装成对象, 持有指针, 并将该连接执行权交给线程池的线程。
+  // 方法是将TcpConnection::connectEstablished放入指定线程的工作队列, 唤醒该线程, 使线程执行这一方法
+  ioLoop->runInLoop(std::bind(&TcpConnection::connectEstablished, conn)); 
 }
 
 void TcpServer::removeConnection(const TcpConnectionPtr& conn)

@@ -39,16 +39,16 @@ void Acceptor::listen()
   loop_->assertInLoopThread();  // 在loop所在的线程执行
   listening_ = true;
 
-  acceptSocket_.listen(); // 调用监听socket的listen()
-  acceptChannel_.enableReading(); // accept通道将可读事件注册到poll(loop所在的), 可以被poll_wait接收响应(accept)
+  acceptSocket_.listen(); // 调用监听socket的listen(), 注意不会阻塞到listen上而阻塞到accept上
+  acceptChannel_.enableReading(); // accept通道将可读事件注册到epoll(loop所在的), 可以被poll_wait接收响应(accept)
 }
 
-// 该函数注册到accept channel的可读回调, 一旦可读说明有连接到来, 通过handleRead处理连接
+// 该函数注册到accept channel的可读回调, 一旦可读说明有连接到来, 通过handleRead accept处理连接
 void Acceptor::handleRead()
 {
   loop_->assertInLoopThread(); // 在loop线程中执行
   InetAddress peerAddr;
-  int connfd = acceptSocket_.accept(&peerAddr); // accept连接, 返回fd和peerAddr
+  int connfd = acceptSocket_.accept(&peerAddr); // accept连接, 返回fd和peerAddr。这里只有master执行accept连接, 对于高并发大量连接的情况可能力不足
   if (connfd >= 0) {
     if (newConnectionCallback_) // 连接回调函数,就是创建连接TcpConnection提供的
     {

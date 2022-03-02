@@ -12,7 +12,7 @@ using namespace muduo;
 
 ///AppendFile构造器根据文件名,  a表示可追加写, 返回得到fp
 FileUtil::AppendFile::AppendFile(StringArg filename)
-  : fp_(::fopen(filename.c_str(), "ae")),  // 'e' for O_CLOEXEC
+  : fp_(::fopen(filename.c_str(), "ae")),  // 'e' for O_CLOEXEC, 利用::fopen创建文件
     writtenBytes_(0)
 {
   /// 设置文件流的缓冲区, fp与缓冲区关联

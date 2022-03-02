@@ -7,7 +7,7 @@
 namespace muduo
 {
 
-// 倒计时
+// 倒计时, 可用于计算多线程执行, 一个线程执行完倒计时-1
 class CountDownLatch : noncopyable
 {
  public:

@@ -25,7 +25,7 @@ namespace muduo
 {
 
 template<typename T>
-class BlockingQueue : noncopyable
+class BlockingQueue : noncopyable // 阻塞队列, 就是限制长度的队列
 {
  public:
   BlockingQueue()

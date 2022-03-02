@@ -88,6 +88,8 @@ class TcpConnection : noncopyable,
   void setHighWaterMarkCallback(const HighWaterMarkCallback& cb, size_t highWaterMark)
   { highWaterMarkCallback_ = cb; highWaterMark_ = highWaterMark; }
 
+
+  // 在TcpConnection中维护了输入缓存和输出缓存, 
   Buffer* inputBuffer() // 可读的信息会自动读取放入inputBuffer中
   { return &inputBuffer_; }
   Buffer* outputBuffer()  // 写出的信息先放入outputBuffer

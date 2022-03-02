@@ -24,7 +24,7 @@ void muduo::net::defaultMessageCallback(const TcpConnectionPtr&,
                                         Buffer* buf,
                                         Timestamp)  // 默认信息传来回调函数, 传入TcpConnectionPtr, buf, 时间戳, 将可读信息写入buf中
 {
-  buf->retrieveAll();
+  buf->retrieveAll(); 
 }
 
 TcpConnection::TcpConnection(EventLoop* loop,
@@ -282,13 +282,14 @@ void TcpConnection::stopReadInLoop()
   }
 }
 
+// master线程将该方法放入工作线程的队列, 使工作线程执行该方法, 将连接事件注册到epoll 红黑树中, 并设置连接回调函数
 void TcpConnection::connectEstablished()  // Tcp连接建立, Acceptor的accept成功后自动调用
 {
   loop_->assertInLoopThread();
   assert(state_ == kConnecting);
   setState(kConnected);
   channel_->tie(shared_from_this());  // channel绑定到Connection,实现channel到Connection的调用
-  channel_->enableReading();  // 设置channel_监听可读事件, 注册channel到poll中
+  channel_->enableReading();  // 设置channel_监听可读事件, 注册channel到poll中。可读可写回调函数在创建TcpConnection的时候就已注册, enableReading只是将fd注入
   connectionCallback_(shared_from_this());   // 连接回调函数
 }
 

@@ -94,7 +94,7 @@ class Logger
 
     // 时间戳
     Timestamp time_;
-    // 日志流
+    // 日志流, 字符串存储到流中
     LogStream stream_;
     // 日志level
     LogLevel level_;

@@ -102,7 +102,7 @@ void sockets::bindOrDie(int sockfd, const struct sockaddr* addr)
 
 void sockets::listenOrDie(int sockfd)
 {
-  int ret = ::listen(sockfd, SOMAXCONN);  // 最多同时有SOMAXCONN处于连接等待, 过多的忽略
+  int ret = ::listen(sockfd, SOMAXCONN);  // 最多同时有SOMAXCONN处于连接等待, socket可监听
   if (ret < 0)
   {
     LOG_SYSFATAL << "sockets::listenOrDie";

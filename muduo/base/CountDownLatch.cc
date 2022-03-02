@@ -9,7 +9,7 @@ CountDownLatch::CountDownLatch(int count)
 {
 }
 
-// 执行完wait, count_已经等于0了
+// 执行wait, 知道count等于0了
 void CountDownLatch::wait()
 {
   MutexLockGuard lock(mutex_);

@@ -8,7 +8,7 @@ namespace muduo
 {
 namespace CurrentThread
 {
-// 设置CurrentThread.h声明的变量  
+// 线程内部变量用了__thread
 __thread int t_cachedTid = 0;
 __thread char t_tidString[32];
 __thread int t_tidStringLength = 6;

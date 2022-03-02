@@ -9,14 +9,14 @@
 namespace muduo
 {
 
-// threadLocal不需要担心多线程
+// T为多线程共享变量的类型
 template<typename T>
 class ThreadLocal : noncopyable
 {
  public:
-  ThreadLocal()
+  ThreadLocal() // 多线程私有数据
   {
-    /// 线程内部变量定义pKey, 析构时调用destructor
+    /// 线程内部变量定义pKey, 多线程私有数据就是根据key拿到的, 析构时调用destructor
     MCHECK(pthread_key_create(&pkey_, &ThreadLocal::destructor));
   }
 
@@ -31,7 +31,7 @@ class ThreadLocal : noncopyable
     
     if (!perThreadValue)  // 如果线程内没有该对象，则重新创建一个
     {
-      T* newObj = new T();
+      T* newObj = new T();  // 创建一个私有对象
       MCHECK(pthread_setspecific(pkey_, newObj)); // 赋值pKey
       perThreadValue = newObj;
     }
